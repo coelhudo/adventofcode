@@ -48,8 +48,7 @@ int main(int argc, char *argv[])
         std::tie(left_bound, right_bound, valid_char, password) = password_entry;
 
         auto n_valid_char = std::count(std::begin(password), std::end(password), valid_char);
-        bool should_could = left_bound <= n_valid_char && n_valid_char <= right_bound;
-        return should_could;
+        return left_bound <= n_valid_char && n_valid_char <= right_bound;
     };
 
     auto valid_passwords = std::count_if(std::begin(passwords_list), std::end(passwords_list), is_valid_policy_1);
