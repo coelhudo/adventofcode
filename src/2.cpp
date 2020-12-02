@@ -65,10 +65,7 @@ int main(int argc, char *argv[])
         bool contains_valid1 = password[pos1-1] == valid_char;
         bool contains_valid2 = password[pos2-1] == valid_char;
 
-        if(contains_valid1 && contains_valid2)
-            return false;
-
-        return contains_valid1 || contains_valid2;
+        return !(contains_valid1 && contains_valid2) && (contains_valid1 || contains_valid2);
     };
 
     valid_passwords = std::count_if(std::begin(passwords_list), std::end(passwords_list), is_valid_policy_2);
