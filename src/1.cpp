@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
     {
         auto begin = std::begin(input);
         while(begin != std::end(input)) {
-            auto result = find_two_numbers_equals_to_sentinel(input, 6000 - *begin, *begin);
+            auto result = find_two_numbers_equals_to_sentinel(input, 2020 - *begin, *begin);
             if(result.has_value()){
                 auto values = *result;
                 int first = std::get<0>(values);
