@@ -7,6 +7,7 @@
 #include <array>
 
 
+//This takes O(toboggan_grid size) since all the other operations occur in constant time
 int main(int argc, char *argv[])
 {
     assert(("expected input", argc == 2));
@@ -27,6 +28,7 @@ int main(int argc, char *argv[])
 
     int trees_counter = 1;
 
+    //O(1) since number of strategies is limited
     for(auto strategy : strategies )
     {
         auto [hstride, vstride] = strategy;
@@ -37,8 +39,10 @@ int main(int argc, char *argv[])
 
         int tree_counter = 0;
 
+        //O(toboggan_grid size)
         while(current_vpos < toboggan_grid.size()) {
 
+            //O(1)
             char tile = toboggan_grid.at(current_vpos).at(current_hpos);
 
             current_hpos = (current_hpos + hstride) % max_unique_length;
@@ -51,9 +55,7 @@ int main(int argc, char *argv[])
         trees_counter *= tree_counter;
     }
 
-
     std::cout << "Trees multiplied: " << trees_counter << '\n';
-
 
     return 0;
 }

@@ -47,10 +47,11 @@ int main(int argc, char *argv[])
         std::string password;
         std::tie(left_bound, right_bound, valid_char, password) = password_entry;
 
-        auto n_valid_char = std::count(std::begin(password), std::end(password), valid_char);
+        auto n_valid_char = std::count(std::begin(password), std::end(password), valid_char); //this takes O(string size)
         return left_bound <= n_valid_char && n_valid_char <= right_bound;
     };
 
+    //this takes O(passwords_list size * string size)
     auto valid_passwords = std::count_if(std::begin(passwords_list), std::end(passwords_list), is_valid_policy_1);
 
     std::cout << "valid passwords according to policy 1: " << valid_passwords << '\n';
@@ -62,12 +63,13 @@ int main(int argc, char *argv[])
         std::string password;
         std::tie(pos1, pos2, valid_char, password) = password_entry;
 
-        bool contains_valid1 = password[pos1-1] == valid_char;
-        bool contains_valid2 = password[pos2-1] == valid_char;
+        bool contains_valid1 = password[pos1-1] == valid_char; //this takes O(1)
+        bool contains_valid2 = password[pos2-1] == valid_char; //this takes O(1)
 
         return !(contains_valid1 && contains_valid2) && (contains_valid1 || contains_valid2);
     };
 
+    //this takes O(passwords_list size * string size)
     valid_passwords = std::count_if(std::begin(passwords_list), std::end(passwords_list), is_valid_policy_2);
 
     std::cout << "valid passwords according to policy 2: " << valid_passwords << '\n';
