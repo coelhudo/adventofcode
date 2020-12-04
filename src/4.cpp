@@ -19,22 +19,13 @@
 struct SimplePassport
 {
     explicit SimplePassport(std::string const& passport_fields) : _passport_fields{passport_fields}
-    {
-
-    }
+    {}
 
     virtual bool is_valid() const {
         //std::cend(passport_fields) - 1: to ignore the last space that were included during the parsing phase
         auto n_field_separators = std::count(std::cbegin(_passport_fields), std::cend(_passport_fields) - 1, ' ');
-        if(n_field_separators == 7)
-        {
-            return true;
-        } else if(n_field_separators == 6 && _passport_fields.find("cid:") == std::string::npos) //since cid is optional
-        {
-            return true;
-        }
-
-        return false;
+        return (n_field_separators == 7) || // if there are 7 separators, that means 8 fields
+               (n_field_separators == 6 && _passport_fields.find("cid:") == std::string::npos); //since cid is optional
     }
 
     const std::string _passport_fields;
@@ -48,6 +39,7 @@ struct ComplexPassport : public SimplePassport
         if(!SimplePassport::is_valid())
             return false;
 
+        //since all fields are here, we can parse and check them
         std::istringstream iss{_passport_fields};
         std::string entry;
         bool valid = true;
