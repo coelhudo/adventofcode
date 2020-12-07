@@ -7,6 +7,8 @@
 #include <set>
 #include <map>
 
+//I'm assuming that there is no cycle. Some bags contain no bags and
+//it will be leaf nodes. Hence, the input file helps to create a DAG.
 struct Bag
 {
     std::string color;
@@ -35,8 +37,6 @@ std::ostream& operator<<(std::ostream &os, Bag const& bag)
 }
 
 
-//fill recursively a set containing all bags.
-//I'm assuming that there is no cycle. Some bags cannot be inside other bags.
 void find_bags(const std::string& bag_name, std::map<std::string, std::set<std::string>> const &bags, std::set<std::string> &all_bags)
 {
     all_bags.insert(bag_name);
@@ -77,6 +77,7 @@ int main(int argc, char *argv[])
     std::map<std::string, std::set<Bag>> bags;
 
     std::string line;
+    //O(n) where n is the input size
     while (std::getline(ifs, line)) {
 
         auto begin = std::sregex_iterator(std::begin(line),  std::end(line), pattern);
@@ -104,7 +105,7 @@ int main(int argc, char *argv[])
 
         ++begin; // search for other bags within
 
-        //third group remaining bags
+        //third group with the remaining bags
         while(begin != end)
         {
             match = *begin++;
@@ -113,8 +114,10 @@ int main(int argc, char *argv[])
     }
 
     std::set<std::string> all_bags;
+    //O(m) where m is the number of nodes in the graph
     find_bags("shiny gold", inverted_index_bags, all_bags);
     std::cout << "Total bags that can carry shiny gold: " << all_bags.size() - 1 << '\n';
+    //O(m) where m is the number of nodes in the graph
     std::cout << "Total bags that shiny gold bags carry: " << find_total_bags({"shiny gold", 0}, bags) << '\n';
 
     return 0;
