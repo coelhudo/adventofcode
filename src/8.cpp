@@ -6,11 +6,18 @@
 #include <set>
 #include <algorithm>
 #include <tuple>
+#include <thread>
+#include <chrono>
 
 enum class OpCode {JMP, NOP, ACC};
 
 struct Instruction
 {
+    Instruction(): name{"nop"}, value{0}, op_code{OpCode::NOP}
+    {
+
+    }
+
     Instruction(std::string const& name, int value): name{name}, value{value}
     {
         if(name == "jmp")
@@ -21,9 +28,21 @@ struct Instruction
             op_code = OpCode::ACC;
     }
 
+    void swap_nop_jmp()
+    {
+        if(op_code == OpCode::NOP){
+            op_code = OpCode::JMP;
+            name = "jmp";
+        } else if(op_code == OpCode::JMP){
+            op_code = OpCode::NOP;
+            name = "nop";
+        }
+    }
+
     std::string name;
     int value;
     OpCode op_code;
+
 };
 
 std::ostream& operator<<(std::ostream &os, Instruction const& instruction)
@@ -32,29 +51,24 @@ std::ostream& operator<<(std::ostream &os, Instruction const& instruction)
     return os;
 }
 
-std::tuple<int, std::size_t, bool> detect_loop(std::vector<Instruction> const& instructions)
+std::tuple<int, std::size_t> detect_loop(std::vector<Instruction> const& instructions)
 {
     int counter{};
-    std::set<int> instructions_executed;
+    std::vector<int> instructions_executed(instructions.size(), 0);
     // assuming that no instruction will try to make sp less than 0
     std::size_t sp = 0;
-    std::size_t sp_before = 0;
     // O(m) where m is the number of instructions since each
     //instructions can execute at most one time
     while(sp != instructions.size()) {
-        if(std::find(std::cbegin(instructions_executed),
-                     std::cend(instructions_executed), sp) != std::cend(instructions_executed))
-            return std::make_tuple(counter, sp_before, true);
-
-        instructions_executed.insert(sp);
+        instructions_executed[sp]++;
         auto instruction = instructions.at(sp);
 
-        //std::cout << "Executing " << instruction << '\n';
-        //std::cout << sp << " " << sp_before << "\n";
-        sp_before = sp;
+        //std::cout << "Executing " << instruction << " at " << sp << '\n';
         switch(instruction.op_code)
             {
             case OpCode::JMP:
+                if(instructions_executed[sp + instruction.value] == 1)
+                    return std::make_tuple(counter, sp);
                 sp += instruction.value;
                 break;
             case OpCode::ACC:
@@ -67,7 +81,7 @@ std::tuple<int, std::size_t, bool> detect_loop(std::vector<Instruction> const& i
             }
     }
 
-    return std::make_tuple(counter, sp_before, false);
+    return std::make_tuple(counter, sp);
 }
 
 int main(int argc, char *argv[])
@@ -93,12 +107,37 @@ int main(int argc, char *argv[])
 
     //part a
     auto result = detect_loop(instructions);
+    std::cout << "Part 1\n";
     std::cout << "Counter before loop: " << std::get<0>(result) << "" << '\n';
-    if(std::get<2>(result))
+    if(std::get<1>(result) != instructions.size())
         std::cout << "Loop found at " << std::get<1>(result) << '\n';
     else
         std::cout << "No loop found\n";
 
+    //part b
+    std::cout << "Part 2\n";
+    //O(n^2) where n is the number of instructions since we can have all instructions as jmp or nop
+    {
+        for(std::size_t i = 0; i != instructions.size(); ++i)
+            {
+                if(instructions.at(i).op_code == OpCode::ACC)
+                    continue;
+
+                instructions.at(i).swap_nop_jmp();
+                result = detect_loop(instructions);
+                instructions.at(i).swap_nop_jmp();
+                if(std::get<1>(result) == instructions.size()) {
+                    std::cout << "Loop found at " << i << " in a " << instructions.at(i) <<'\n';
+                    break;
+                }
+            }
+    }
+
+    std::cout << "Counter before loop: " << std::get<0>(result) << "" << '\n';
+    if(std::get<1>(result) != instructions.size())
+        std::cout << "Loop found at " << std::get<1>(result) << '\n';
+    else
+        std::cout << "No loop found\n";
 
     return 0;
 }
