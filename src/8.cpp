@@ -13,11 +13,6 @@ enum class OpCode {JMP, NOP, ACC};
 
 struct Instruction
 {
-    Instruction(): name{"nop"}, value{0}, op_code{OpCode::NOP}
-    {
-
-    }
-
     Instruction(std::string const& name, int value): name{name}, value{value}
     {
         if(name == "jmp")
