@@ -9,6 +9,8 @@
 #include <iterator>
 #include <algorithm>
 #include <array>
+#include <functional>
+#include <cmath>
 
 class Seats
 {
@@ -38,18 +40,37 @@ public:
         return _seats.at(_columns * row + column);
     };
 
+    int number_of_occupied_at_sight(std::size_t r, std::size_t c) const {
+        int row = static_cast<int>(r);
+        int column = static_cast<int>(c);
+
+        int occupied_at_sight{};
+
+        for(auto base_pos : _base_positions) {
+            int count = 1;
+            auto seat = this->operator()(row + base_pos.first * count, column + base_pos.second * count);
+            while(seat == '.') {
+                ++count;
+                seat = this->operator()(row + base_pos.first * count, column + base_pos.second * count);
+            }
+            if(seat == '#')
+                ++occupied_at_sight;
+        }
+
+        return occupied_at_sight;
+    }
+
     int number_adjacent_seats_occupied(std::size_t r, std::size_t c) const {
         int row = static_cast<int>(r);
         int column = static_cast<int>(c);
         int occupied_seats{};
-        for(int i = row - 1; i <= row + 1; ++i) {
-            for(int j = column - 1; j <= column + 1; ++j) {
-                auto seat = this->operator()(i, j);
-                if(seat != Seats::invalid_char && seat == '#' && !(i == row && j == column) ) {
-                    ++occupied_seats;
-                }
+        for(auto base_pos : _base_positions) {
+            auto seat = this->operator()(row + base_pos.first, column + base_pos.second);
+            if(seat == '#') {
+                ++occupied_seats;
             }
         }
+
         return occupied_seats;
     };
 
@@ -75,6 +96,10 @@ private:
     std::vector<char> _seats;
     std::size_t _rows;
     std::size_t _columns;
+    const std::array<std::pair<int, int>, 8> _base_positions {
+            std::make_pair(-1,-1), {-1, 0}, {-1, 1},
+            {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}
+    };
 };
 
 const char Seats::invalid_char = 0;
@@ -119,84 +144,49 @@ int main(int argc, char *argv[])
                 }
             }
 
+            // seats.print();
+
             seats = Seats(assigned_seats, rows, columns);
         }
 
-        std::cout << seats.occupied() << '\n';
+        // seats.print();
+
+        std::cout << "Part a " << seats.occupied() << '\n';
     }
 
     //part b
+    {
+        bool changed = true;
+        //O(number of times until equilibria * n) where n is the input value;
+        Seats seats(seats_container, rows, columns);
 
-    // auto first_seat = [&](std::size_t r, std::size_t c){
-    //     int row = static_cast<int>(r);
-    //     int column = static_cast<int>(c);
-    //     const std::array<std::pair<int,int>, 8> initial_positions = {
-    //         std::make_pair(-1,-1), {0, -1}, {1,-1},
-    //         {-1,0}, {1,0}, {-1,1}, {0,1}, {1,1}
-    //     };
+        while(changed) {
+            std::vector<char> assigned_seats;
+            changed = false;
+            for(int i = 0; i < rows; ++i) {
+                for(int j = 0; j < columns; ++j) {
+                    auto seat = seats(i, j);
+                    int occupied_seats_at_sight = seats.number_of_occupied_at_sight(i, j);
+                    bool met_condition = false;
+                    if((met_condition = (seat == 'L' && occupied_seats_at_sight == 0)))
+                        assigned_seats.push_back('#');
+                    else if((met_condition = seat == '#' && occupied_seats_at_sight >= 5))
+                        assigned_seats.push_back('L');
+                    else
+                        assigned_seats.push_back(seat);
+                    changed |= met_condition;
+                }
+            }
 
-    //     int min_pos_index = 9;
-    //     std::pair<int, int> min_pos{};
+            // seats.print();
 
-    //     for(auto initial_pos: initial_positions) {
-    //         for(int i = 1; i <= 8; ++i) {
-    //             auto cr = row + initial_pos.first * i;
-    //             auto cc = column + initial_pos.second * i;
-    //             auto [valid, seat] = seat_at(cr, cc);
-    //             if(valid && seat == 'L' && i < min_pos_index) {
-    //                 min_pos_index = i;
-    //                 min_pos = initial_pos;
-    //             }
-    //         }
-    //     }
+            seats = Seats(assigned_seats, rows, columns);
+        }
 
-    //     return min_pos;
-    // };
+        // seats.print();
 
-
-
-    //part b
-    // {
-    //     std::vector<char> assigned_seats;
-    //     bool changed = true;
-    //     //O(number of times until equilibria * n) where n is the input value;
-    //     while(changed) {
-
-    //         changed = false;
-    //         for(int i = 0; i < rows; ++i) {
-    //             for(int j = 0; j < columns; ++j) {
-    //                 auto [seat, valid] = seat_at(i, j);
-    //                 if(seat == 'L')
-    //                 {
-    //                     auto [r, c] = first_seat(i, j);
-    //                     if(!(r == 0 && c == 0)) {
-    //                         changed = true;
-    //                         assigned_seats.push_back('#');
-    //                         continue;
-    //                     }
-    //                 }
-    //                 else if(seat == '#')
-    //                 {
-    //                     int occupied_seats = number_adjacent_seats_occupied(i, j);
-    //                     if(occupied_seats >= 5) {
-    //                         changed = true;
-    //                         assigned_seats.push_back('L');
-    //                         continue;
-    //                     }
-    //                 }
-
-    //                 assigned_seats.push_back(seat);
-    //             }
-    //         }
-
-    //         seats = assigned_seats;
-    //         assigned_seats.clear();
-    //     }
-
-    //     print_vector(seats);
-
-    //     std::cout << std::count(std::cbegin(seats), std::cend(seats), '#') << '\n';
-    // }
+        std::cout << "Part b " << seats.occupied() << '\n';
+    }
 
     return 0;
 }
