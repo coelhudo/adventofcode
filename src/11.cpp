@@ -40,7 +40,7 @@ public:
         return _seats.at(_columns * row + column);
     };
 
-    int number_of_occupied_at_sight(std::size_t r, std::size_t c) const {
+    int number_of_occupied_at_sight(std::size_t r, std::size_t c, bool adjacent) const {
         int row = static_cast<int>(r);
         int column = static_cast<int>(c);
 
@@ -49,7 +49,7 @@ public:
         for(auto base_pos : _base_positions) {
             int count = 1;
             auto seat = this->operator()(row + base_pos.first * count, column + base_pos.second * count);
-            while(seat == '.') {
+            while(seat == '.' && !adjacent) {
                 ++count;
                 seat = this->operator()(row + base_pos.first * count, column + base_pos.second * count);
             }
@@ -59,21 +59,6 @@ public:
 
         return occupied_at_sight;
     }
-
-    int number_adjacent_seats_occupied(std::size_t r, std::size_t c) const {
-        int row = static_cast<int>(r);
-        int column = static_cast<int>(c);
-        int occupied_seats{};
-        for(auto base_pos : _base_positions) {
-            auto seat = this->operator()(row + base_pos.first, column + base_pos.second);
-            if(seat == '#') {
-                ++occupied_seats;
-            }
-        }
-
-        return occupied_seats;
-    };
-
 
     void print() const
     {
@@ -132,7 +117,7 @@ int main(int argc, char *argv[])
             for(int i = 0; i < rows; ++i) {
                 for(int j = 0; j < columns; ++j) {
                     auto seat = seats(i, j);
-                    int occupied_seats = seats.number_adjacent_seats_occupied(i, j);
+                    int occupied_seats = seats.number_of_occupied_at_sight(i, j, true);
                     bool met_condition = false;
                     if((met_condition = (seat == 'L' && occupied_seats == 0)))
                         assigned_seats.push_back('#');
@@ -166,7 +151,7 @@ int main(int argc, char *argv[])
             for(int i = 0; i < rows; ++i) {
                 for(int j = 0; j < columns; ++j) {
                     auto seat = seats(i, j);
-                    int occupied_seats_at_sight = seats.number_of_occupied_at_sight(i, j);
+                    int occupied_seats_at_sight = seats.number_of_occupied_at_sight(i, j, false);
                     bool met_condition = false;
                     if((met_condition = (seat == 'L' && occupied_seats_at_sight == 0)))
                         assigned_seats.push_back('#');
