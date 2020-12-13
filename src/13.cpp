@@ -42,12 +42,15 @@ int main(int argc, char *argv[])
 
 
     std::size_t departure = 0;
+    int incrementer = max_value;
+    int offset_index = std::find(std::cbegin(buses_id), std::cend(buses_id), max_value) - std::begin(buses_id);
+    offset = buses_id_offset.at(offset_index);
 
     while(true)
     {
         bool condition = true;
-        for(int i = 1; i < buses_id.size(); ++i) {
-            condition &= (departure + buses_id_offset.at(i)) % buses_id.at(i) == 0;
+        for(int i = 0; i < buses_id.size(); ++i) {
+            condition &= (departure + buses_id_offset.at(i)) % buses_id.at(i) == offset;
             if(!condition)
                 break;
         }
@@ -55,11 +58,11 @@ int main(int argc, char *argv[])
         if(condition)
             break;
 
-        departure += buses_id.at(0);
+        departure += incrementer;
     }
 
     std::cout << "Part B\n";
-    std::cout << departure << '\n';
+    std::cout << departure - offset << '\n';
 
     return 0;
 }
