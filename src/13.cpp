@@ -46,20 +46,15 @@ int main(int argc, char *argv[])
     int offset_index = std::find(std::cbegin(buses_id), std::cend(buses_id), max_value) - std::begin(buses_id);
     offset = buses_id_offset.at(offset_index);
 
-    while(true)
-    {
-        bool condition = true;
-        for(int i = 0; i < buses_id.size(); ++i) {
-            condition &= (departure + buses_id_offset.at(i)) % buses_id.at(i) == offset;
-            if(!condition)
-                break;
-        }
-
-        if(condition)
-            break;
-
+    bool condition;
+    do {
         departure += incrementer;
-    }
+
+        condition = true;
+        for(int i = 0; i < buses_id.size() && condition; ++i)
+            condition &= (departure + buses_id_offset.at(i)) % buses_id.at(i) == offset;
+
+    } while(!condition);
 
     std::cout << "Part B\n";
     std::cout << departure - offset << '\n';
