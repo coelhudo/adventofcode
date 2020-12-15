@@ -93,14 +93,13 @@ std::size_t part_b(std::vector<std::string> const& entries)
             //Generate each combination possible and shift the 1 to the correct position
             auto n_combinations = std::pow(2, x_pos.size());
 
-            const std::vector<int> x_pos2{x_pos.rbegin(), x_pos.rend()};
             //O(2^36 * 36) since we can have 36 Xs and we will perform the logical operators 36 times at maximum
             for(int i = 0; i < n_combinations; ++i)
             {
                 std::bitset<BITS> x{0};
-                for(int index = 0; index < x_pos2.size(); ++index) {
+                for(int index = 0; index < x_pos.size(); ++index) {
                     std::bitset<BITS> current_bit(((1 << index) & i) >> index);
-                    auto mask = current_bit << x_pos2.at(index);
+                    auto mask = current_bit << x_pos.at(index);
                     x |= mask;
                 }
 
