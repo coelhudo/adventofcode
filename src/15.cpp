@@ -22,15 +22,14 @@ int main(int argc, char *argv[])
         bool has_been_spoken = pos != std::end(input);
 
         if(has_been_spoken) {
-            auto last_time_spoken = pos->second;
-            input[current] = current_pos;
+            const auto last_time_spoken = pos->second; //save since the dictionary is going to be updated
+            pos->second = current_pos;
             current = current_pos - last_time_spoken;
-            ++current_pos;
         } else {
             input[current] = current_pos;
-            ++current_pos;
             current = 0;
         }
+        ++current_pos;
     }
 
     std::cout << last_n << '\n';
