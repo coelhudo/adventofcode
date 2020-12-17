@@ -96,7 +96,6 @@ int main(int argc, char *argv[])
                 break;
             case State::MY:
                 {
-                    //std::cout << "My " << line << '\n';
                     std::istringstream iss{line};
                     std::string field;
                     while(std::getline(iss, field, ',')){
@@ -106,7 +105,6 @@ int main(int argc, char *argv[])
                 break;
             case State::OTHERS:
                 {
-                    //std::cout << "Others " << line << '\n';
                     std::istringstream iss{line};
                     std::vector<std::size_t> fields;
                     std::string field;
@@ -166,13 +164,13 @@ int main(int argc, char *argv[])
         }
     }
 
-    std::cout << "Part A\n";
+    std::cout << "Part A\nFault digits\n";
     for(auto fault_digit: fault_digits)
         std::cout << fault_digit << ' ';
     std::cout << '\n';
     std::cout << "result " << std::accumulate(std::cbegin(fault_digits), std::cend(fault_digits), 0) << '\n';
 
-    std::cout << "Part B\n";
+    std::cout << "Part B\nMy tickets\n";
     for(auto field: my_ticket)
         std::cout << field << ' ';
     std::cout << '\n';
@@ -194,13 +192,26 @@ int main(int argc, char *argv[])
         bitmap.emplace_back(bits.str());
     }
 
+    //1. create a single bitset containing all results every "number of fields bits"
+    //         Value 1 | Value 2 | Value 3
+    //Ticket1: 011       111       111
+    //Ticket2: 110       111       111
+    //Ticket3: 111       110       111
+    //
+    //So, Ticket 1, value 1 can be field 2 and 3. Ticket 2 Value 3 can
+    //be all fields, and so on.
+    //This result in the following bitset
+    //010 110 111
     std::bitset<1000> result{};
     result.set();
     for(auto bits: bitmap) {
         result &= bits;
     }
 
-    std::vector<std::bitset<1000>> possibilities;
+    //2. create a mask to extract all values associated with all fields
+    //This will separate the values
+    //So, the vector will contain the values {111, 110, 010}
+    std::vector<std::bitset<1000>> possible_fields;
     std::bitset<1000> mask{};
     for(int i = 0; i < field_intervals.size(); ++i)
     {
@@ -212,43 +223,67 @@ int main(int argc, char *argv[])
         auto r = result & mask;
         r >>= (field_intervals.size() * i);
 
-        possibilities.push_back(r);
+        possible_fields.push_back(r);
         mask <<= field_intervals.size();
     }
 
-    std::vector<std::string> fields_order(field_intervals.size());
+    //Need to reverse due to the way the data was manipulated above: from left to right
+    //So, the vector now will contain the values {010, 110, 111}
+    std::reverse(std::begin(possible_fields), std::end(possible_fields));
 
     auto only_relevant_bits = [&](auto const &bits) {
         auto str = bits.to_string();
         return str.substr(str.size() - field_intervals.size());
     };
 
-    auto it = std::find_if(std::begin(possibilities), std::end(possibilities), [](auto const& possibility){
-        return possibility.count() == 1;
-    });
+    //The value with just one bit as 1 shows what is the correct
+    //field. So, we can 0 all the other candidates in this
+    //possible. We do this by flipping the bitset and masking with all
+    //the values
+    std::vector<std::string> fields_correct_order(possible_fields.size());
 
-    auto current_mask = *it;
-    current_mask.flip();
-
-    std::vector<std::string> fields_result;
-
-    while (!possibilities.empty()) {
-        std::cout << only_relevant_bits(*it) << "\n";
-
-        possibilities.erase(it);
-
-        std::transform(std::begin(possibilities), std::end(possibilities),
-                       std::begin(possibilities), [&](auto const& possibility) {
-                           return possibility & current_mask;
-                       });
-
-        it = std::find_if(std::begin(possibilities), std::end(possibilities), [](auto const& possibility){
-            return possibility.count() == 1;
-
+    //The field
+    auto times = possible_fields.size();
+    while (times--) {
+        auto it = std::find_if(std::begin(possible_fields), std::end(possible_fields), [](auto const& possible_field){
+            return possible_field.count() == 1;
         });
-        current_mask = *it;
-        current_mask.flip();
+
+        //find where the single bit is 1 and put in the correct possition
+        auto index = std::distance(std::begin(possible_fields), it);
+        fields_correct_order[index] = only_relevant_bits(*it);
+
+        auto current_mask = *it;
+        current_mask.flip(); //value inversion for subsequent opration
+        it->reset();//make it all zeros since we already know which field was represented by this bit
+
+        //Since we know the field name for the bit at position index, we can make it zero in all other candidates
+        std::transform(std::begin(possible_fields), std::end(possible_fields),
+                       std::begin(possible_fields), [&current_mask](auto const& possible_field) {
+                           return possible_field & current_mask;
+                       });
     }
+
+    std::size_t all_departures_multiplied{1};
+    std::vector<std::string> fields_correct;
+    for(int i = 0; i < field_intervals.size(); ++i){
+        auto current = fields_correct_order.at(i);
+        auto pos = current.find("1");
+        auto field_it = std::begin(field_intervals);
+        std::advance(field_it, pos);
+        auto field_name = field_it->first;
+        fields_correct.push_back(field_name);
+
+        //all fields contains the departure word as the first word, so
+        //don't need to worry about fields that doesn't start with
+        //departure since the requirement is only about fields that
+        //starts with it
+        if(field_name.find("departure") != std::string::npos) {
+            all_departures_multiplied *= my_ticket.at(i);
+        }
+    }
+
+    std::cout << all_departures_multiplied << "\n";
 
     return 0;
 }
