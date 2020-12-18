@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <tuple>
 #include <vector>
+#include <functional>
 
 typedef std::tuple<int,int,int> Coordinate;
 
@@ -14,8 +15,34 @@ std::ostream & operator<<(std::ostream &os, Coordinate const& coord){
     return os;
 }
 
+Coordinate operator+(Coordinate lhs, Coordinate rhs) {
+    return {std::get<0>(lhs) + std::get<0>(rhs),
+            std::get<1>(lhs) + std::get<1>(rhs),
+            std::get<2>(lhs) + std::get<2>(rhs)};
+}
+
 typedef std::set<Coordinate> Cubes3DSpace;
 
+void apply_rule(Cubes3DSpace const& space, Cubes3DSpace const &neighbours_delta,
+                Cubes3DSpace const& reference_cubes_space, Cubes3DSpace &new_cubes_space,
+                std::function<bool(int)> rule,
+                std::function<void(Coordinate)> process_inactive_neighbour = [](Coordinate neighbour){}) {
+    for(auto cube: space)
+    {
+        int count{};
+        for(auto delta : neighbours_delta) {
+            auto neighbour = cube + delta;
+            auto is_neighbour_active = cube != neighbour;
+            is_neighbour_active &= (reference_cubes_space.find(neighbour) != std::end(reference_cubes_space));
+            if(is_neighbour_active)
+                ++count;
+            else
+                process_inactive_neighbour(neighbour);
+        }
+        if(rule(count))
+            new_cubes_space.emplace(cube);
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -30,15 +57,14 @@ int main(int argc, char *argv[])
     while(ifs >> line) {
         for(int current_y = 0; current_y < line.size(); ++current_y) {
             if(line[current_y] == '#') {
-                auto cube = Coordinate(0, current_x, current_y);
-                cubes_space.emplace(cube);
+                cubes_space.emplace(0, current_x, current_y);
             }
         }
         ++current_x;
     }
 
-    std::set<std::tuple<int, int, int>> neighbours_delta;
-    std::set<std::tuple<int, int, int>> initial_deltas;
+    Cubes3DSpace neighbours_delta;
+    Cubes3DSpace initial_deltas;
     for(auto x :{0,1})
         for(auto y :{0,1})
             for(auto z: {0,1})
@@ -62,39 +88,16 @@ int main(int argc, char *argv[])
         Cubes3DSpace new_cubes_space;
 
         //Apply first rule on active cubes
-        for(auto cube: cubes_space)
-        {
-            auto[z,x,y] = cube;
-            int count{};
-            for(auto [delta_z, delta_x, delta_y] : neighbours_delta) {
-                auto neighbour = Coordinate(z+delta_z, x+delta_x, y+delta_y);
-                if(neighbour != cube && cubes_space.find(neighbour) != std::end(cubes_space)) {
-                    ++count;
-                 } else
-                     // if was tested as neighbour of one of the active cubes it means
-                     // that this is an inactive cube that needs to be checked against
-                     // its neighbours. We save the inactive cubes to apply second rule later
-                    inactive_cubes_with_neighbours.emplace(neighbour);
-            }
-            if(count == 2 || count == 3) {
-                new_cubes_space.emplace(cube);
-            }
-        }
+        apply_rule(cubes_space, neighbours_delta, cubes_space, new_cubes_space,
+                   [](int count) { return count == 2 || count == 3;},
+                   [&inactive_cubes_with_neighbours](Coordinate coordinate) {
+                       inactive_cubes_with_neighbours.emplace(coordinate);
+                   });
+
 
         //Apply second rule on inactive cubes
-        for(auto cube: inactive_cubes_with_neighbours)
-        {
-            auto[z,x,y] = cube;
-            int count{};
-            for(auto [delta_z, delta_x, delta_y] : neighbours_delta) {
-                auto neighbour = Coordinate(z+delta_z, x+delta_x, y+delta_y);
-                if(cube != neighbour && cubes_space.find(neighbour) != std::end(cubes_space))
-                    ++count;
-            }
-            if(count == 3) {
-                new_cubes_space.emplace(cube);
-            }
-        }
+        apply_rule(inactive_cubes_with_neighbours, neighbours_delta, cubes_space, new_cubes_space,
+                   [](int count) { return count == 3;});
 
         cubes_space = new_cubes_space;
     }
