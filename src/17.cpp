@@ -30,8 +30,7 @@ int main(int argc, char *argv[])
     while(ifs >> line) {
         for(int current_y = 0; current_y < line.size(); ++current_y) {
             if(line[current_y] == '#') {
-                auto cube = Coordinate(current_x, current_y, 0);
-                //std::cout << cube << '\n';
+                auto cube = Coordinate(0, current_x, current_y);
                 cubes_space.emplace(cube);
             }
         }
@@ -56,44 +55,40 @@ int main(int argc, char *argv[])
         neighbours_delta.emplace(x*-1, y*-1, z*-1);
     }
 
-    int cycles = 3;
+    int cycles = 6;
     while(cycles--)
     {
         Cubes3DSpace inactive_cubes_with_neighbours;
         Cubes3DSpace new_cubes_space;
 
         //Apply first rule on active cubes
-        std::cout << "Active cubes\n";
         for(auto cube: cubes_space)
         {
-            std::cout << cube << '\n';
-            auto[x,y,z] = cube;
+            auto[z,x,y] = cube;
             int count{};
-            for(auto [delta_x, delta_y, delta_z] : neighbours_delta) {
-                auto neighbour = Coordinate(x+delta_x, y+delta_y, z+delta_z);
-                if(cubes_space.find(neighbour) != std::end(cubes_space))
+            for(auto [delta_z, delta_x, delta_y] : neighbours_delta) {
+                auto neighbour = Coordinate(z+delta_z, x+delta_x, y+delta_y);
+                if(neighbour != cube && cubes_space.find(neighbour) != std::end(cubes_space)) {
                     ++count;
-                else
+                 } else
                      // if was tested as neighbour of one of the active cubes it means
                      // that this is an inactive cube that needs to be checked against
                      // its neighbours. We save the inactive cubes to apply second rule later
                     inactive_cubes_with_neighbours.emplace(neighbour);
             }
             if(count == 2 || count == 3) {
-                //std::cout << cube << ": will remain active\n";
                 new_cubes_space.emplace(cube);
             }
         }
 
         //Apply second rule on inactive cubes
-        std::cout << "Inactive cubes\n";
         for(auto cube: inactive_cubes_with_neighbours)
         {
-            std::cout << cube << '\n';
-            auto[x,y,z] = cube;
+            auto[z,x,y] = cube;
             int count{};
-            for(auto [delta_x, delta_y, delta_z] : neighbours_delta) {
-                if(cubes_space.find(Coordinate(x+delta_x, y+delta_y, z+delta_z)) != std::end(cubes_space))
+            for(auto [delta_z, delta_x, delta_y] : neighbours_delta) {
+                auto neighbour = Coordinate(z+delta_z, x+delta_x, y+delta_y);
+                if(cube != neighbour && cubes_space.find(neighbour) != std::end(cubes_space))
                     ++count;
             }
             if(count == 3) {
@@ -104,10 +99,8 @@ int main(int argc, char *argv[])
         cubes_space = new_cubes_space;
     }
 
+    std::cout << "Part A\n";
     std::cout << cubes_space.size() << '\n';
-    // for(auto [x,y,z]: cubes_space)
-    //     std::cout << "current: " << x << ' ' << y << ' ' << z << "\n";
-
 
     return 0;
 }
