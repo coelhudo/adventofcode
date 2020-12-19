@@ -1,3 +1,4 @@
+#include <bits/c++config.h>
 #include <iostream>
 #include <fstream>
 #include <iterator>
@@ -29,8 +30,8 @@ void execute_operation(std::stack<std::size_t> &numbers, std::stack<std::string>
 
 typedef std::vector<std::string>::iterator tokens_iterator;
 
-std::size_t evaluate(tokens_iterator &token,
-                     std::function<bool(tokens_iterator&)> terminate_condition){
+std::size_t evaluate_a(tokens_iterator &token,
+                       std::function<bool(tokens_iterator&)> terminate_condition){
     std::stack<std::string> operations;
     std::stack<std::size_t> numbers;
 
@@ -45,7 +46,7 @@ std::size_t evaluate(tokens_iterator &token,
         }
         else if(*token == "(")
         {
-            numbers.push(evaluate(++token, [](tokens_iterator &token){ return *token != ")";}));
+            numbers.push(evaluate_a(++token, [](tokens_iterator &token){ return *token != ")";}));
         }
         else
         {
@@ -60,6 +61,61 @@ std::size_t evaluate(tokens_iterator &token,
     assert(numbers.size() == 1);
 
     return numbers.top();
+}
+
+std::size_t evaluate_b(tokens_iterator &token,
+                       std::function<bool(tokens_iterator&)> terminate_condition){
+    std::stack<std::string> operations;
+    std::stack<std::size_t> numbers;
+
+    while(terminate_condition(token))
+    {
+        if(*token == "+" || *token == "*")
+        {
+            operations.push(*token);
+        }
+        else if(*token == "(")
+        {
+            numbers.push(evaluate_b(++token, [](tokens_iterator &token){ return *token != ")";}));
+        }
+        else
+        {
+            numbers.push(std::stoi(*token));
+        }
+        ++token;
+    }
+
+    //save all multiplication for later while executes all add
+    //operations
+    std::stack<std::string> mul_operations;
+    std::stack<std::size_t> mul_numbers;
+    while(!operations.empty()) {
+        if(operations.top() == "*")
+        {
+            mul_numbers.push(numbers.top());
+            numbers.pop();
+            mul_operations.push(operations.top());
+            operations.pop();
+        } else {
+            execute_operation(numbers, operations);
+        }
+    }
+
+    mul_numbers.push(numbers.top());
+    numbers.pop();
+
+    //exeucte multiplications operations
+    while(!mul_operations.empty())
+    {
+        execute_operation(mul_numbers, mul_operations);
+    }
+
+    assert(operations.size() == 0);
+    assert(numbers.size() == 0);
+    assert(mul_operations.size() == 0);
+    assert(mul_numbers.size() == 1);
+
+    return mul_numbers.top();
 }
 
 int main(int argc, char *argv[])
@@ -111,22 +167,35 @@ int main(int argc, char *argv[])
         formulas.push_back(tokens);
     }
 
-    std::size_t accumulator{};
+    std::size_t accumulator_part_a{};
+    std::size_t accumulator_part_b{};
     for(auto formula: formulas)
     {
         // for(auto token: formula)
         // {
         //     std::cout << token << ' ';
         // }
-        // std::cout << ": ";
+        // std::cout << ": \n";
 
-        auto token = std::begin(formula);
-        std::size_t result = evaluate(token, [&formula](tokens_iterator &token){ return token != std::end(formula);});
-        accumulator += result;
-        // std::cout << result << '\n';
+        {
+            auto token = std::begin(formula);
+            std::size_t result = evaluate_a(token, [&formula](tokens_iterator &token){ return token != std::end(formula);});
+            accumulator_part_a += result;
+            // std::cout << "part a " << result << '\n';
+        }
+
+        {
+            auto token = std::begin(formula);
+            std::size_t result = evaluate_b(token, [&formula](tokens_iterator &token){ return token != std::end(formula);});
+            accumulator_part_b += result;
+            // std::cout << "part b " << result << '\n';
+        }
+
     }
 
-    std::cout << "Part A\nResult: " << accumulator << '\n';
+    std::cout << "Part A\nResult: " << accumulator_part_a << '\n';
+    std::cout << "Part B\nResult: " << accumulator_part_b << '\n';
+
 
     return 0;
 }
