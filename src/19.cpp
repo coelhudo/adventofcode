@@ -91,6 +91,17 @@ int main(int argc, char *argv[])
         return result;
     };
 
+    bool debug = false;
+    auto print_expanded_rules = [debug](auto const& expanded_rules, std::string const& delimiter)
+    {
+        if(!debug)
+            return;
+        std::cout << "======== " << delimiter << " start ========" << '\n';
+        for(auto subrules: expanded_rules)
+            print_container(subrules);
+        std::cout << "======== " << delimiter << " end ========" << '\n';
+    };
+
     int count{0};
     for(auto entry : entries)
     {
@@ -98,8 +109,9 @@ int main(int argc, char *argv[])
         // print_container(entry_rules);
 
         std::list<std::list<int>> expanded_rules{{0}};
-        while(!entry_rules.empty() && expanded_rules.size())
+        while(!entry_rules.empty() && !expanded_rules.empty())
         {
+            print_expanded_rules(expanded_rules, "begin");
             std::list<std::list<int>> expanded_rules2;
             //expand leftmost rules
             for(auto &subrules : expanded_rules)
@@ -126,6 +138,8 @@ int main(int argc, char *argv[])
 
             expanded_rules = expanded_rules2;
 
+            print_expanded_rules(expanded_rules, "middle");
+
             const bool all_leftmost_rules_are_terminal = std::all_of(std::begin(expanded_rules),
                                                                      std::end(expanded_rules),
                                                                      [&rules](auto const& subrules)
@@ -149,14 +163,18 @@ int main(int argc, char *argv[])
                 if(!expanded_rules.empty())
                 {
                     entry_rules.pop_front();
+                    auto it = std::remove_if(std::begin(expanded_rules), std::end(expanded_rules), [&entry_rules](auto &subrules)
+                    {
+                        return subrules.empty();
+                    });
+                    expanded_rules.erase(it, expanded_rules.end());
                 }
             }
 
-            if(expanded_rules.size() == 1 && (*std::begin(expanded_rules)).empty())
-                break;
+            print_expanded_rules(expanded_rules, "after");
         }
 
-        if(entry_rules.empty() && expanded_rules.size() == 1)
+        if(entry_rules.empty() && expanded_rules.empty())
             ++count;
     }
 
