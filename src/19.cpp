@@ -8,8 +8,6 @@
 #include <list>
 #include <algorithm>
 #include <sstream>
-#include <unordered_set>
-#include <unordered_map>
 
 template<typename Container>
 void print_container(Container const& subrules, char end = '\n')
@@ -24,7 +22,6 @@ int main(int argc, char *argv[])
     assert(("expect input", argc == 2));
 
     std::multimap<int, std::vector<int>> rules;
-    std::multimap<std::vector<int>, int> inverted_rules;
     std::map<char, int> terminal_rules;
     std::vector<std::string> entries;
 
@@ -77,45 +74,11 @@ int main(int argc, char *argv[])
         }
     }
 
-    for(auto [rule_number, subrules]: rules)
-    {
-        if(subrules.size() != 1)
-            continue;
-
-        for(auto &entry: rules)
-        {
-            auto &rules = entry.second;
-            if(rules.at(0) == rule_number)
-                rules[0] = subrules.at(0);
-            if(rules.size() != 1 && rules.at(1) == rule_number)
-                rules[1] = subrules.at(0);
-        }
-    }
-
-    for(auto [rule_number, subrules]: rules)
-    {
-        if(subrules.size() == 1)
-            continue;
-
-        inverted_rules.insert({subrules, rule_number});
-    }
-
-    // std::cout << "=============" << "\n";
 
     // for(auto [rule_number, subrules]: rules)
     // {
     //     std::cout << rule_number << ": ";
-    //     for(auto subrule: subrules)
-    //         std::cout << subrule << ' ';
-    //     std::cout << "\n";
-
-    // }
-
-    // for(auto [subrules, rule_number]: inverted_rules)
-    // {
-    //     for(auto subrule: subrules)
-    //         std::cout << subrule << ' ';
-    //     std::cout << ": " << rule_number << "\n";
+    //     print_container(subrules);
     // }
 
     auto translate_to_terminal_rules = [&terminal_rules](std::string const& entry)
@@ -132,11 +95,11 @@ int main(int argc, char *argv[])
     for(auto entry : entries)
     {
         auto entry_rules = translate_to_terminal_rules(entry);
+        // print_container(entry_rules);
 
         std::list<std::list<int>> expanded_rules{{0}};
         while(!entry_rules.empty() && expanded_rules.size())
         {
-
             std::list<std::list<int>> expanded_rules2;
             //expand leftmost rules
             for(auto &subrules : expanded_rules)
@@ -170,6 +133,7 @@ int main(int argc, char *argv[])
                                                                          return rules.find(subrules.front()) == std::end(rules);
                                                                      });
 
+            // print_container(entry_rules);
             if(all_leftmost_rules_are_terminal)
             {
                 auto it = std::remove_if(std::begin(expanded_rules), std::end(expanded_rules), [&entry_rules](auto &subrules)
@@ -196,7 +160,7 @@ int main(int argc, char *argv[])
             ++count;
     }
 
-    std::cout << count << "\n";
+    std::cout << "Part 1: " << count << "\n";
 
 
     return 0;
