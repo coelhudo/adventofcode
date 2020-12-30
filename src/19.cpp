@@ -3,11 +3,14 @@
 #include <iostream>
 #include <fstream>
 #include <cassert>
+#include <iterator>
 #include <map>
+#include <set>
 #include <vector>
 #include <list>
 #include <algorithm>
 #include <sstream>
+#include <cmath>
 
 template<typename Container>
 void print_container(Container const& subrules, char end = '\n')
@@ -29,7 +32,6 @@ int main(int argc, char *argv[])
     std::string line;
 
     bool is_a_rule = true;
-
 
     while(std::getline(ifs, line))
     {
@@ -75,9 +77,38 @@ int main(int argc, char *argv[])
     }
 
 
-    // for(auto [rule_number, subrules]: rules)
+    //All the inputs have the cycles specified within the rule
+    //Ex.: 8 -> 42 8
+    //So, we only need to search for this in each rule
+    std::map<int, std::vector<int>> cyclic_rules;
+    for(auto it = rules.begin(); it != rules.end();)
+    {
+        auto [rule_number, subrules] = *it;
+        const bool cyclic = std::find(std::begin(subrules), std::end(subrules), rule_number) != std::end(subrules);
+        if(cyclic)
+        {
+            auto cyclic_rule_it = std::remove(std::begin(subrules), std::end(subrules), rule_number);
+            subrules.erase(cyclic_rule_it);
+            cyclic_rules.insert({rule_number, subrules});
+            it = rules.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+
+    // for(auto [rule, subrules]: rules)
     // {
-    //     std::cout << rule_number << ": ";
+    //     std::cout << rule << ": ";
+    //     print_container(subrules);
+    // }
+
+    // std::cout << "cyclic rules" << "\n";
+
+    // for(auto [rule, subrules]: cyclic_rules)
+    // {
+    //     std::cout << rule << ": ";
     //     print_container(subrules);
     // }
 
@@ -112,31 +143,59 @@ int main(int argc, char *argv[])
         while(!entry_rules.empty() && !expanded_rules.empty())
         {
             print_expanded_rules(expanded_rules, "begin");
-            std::list<std::list<int>> expanded_rules2;
+            std::list<std::list<int>> current_expanded_rules;
             //expand leftmost rules
             for(auto &subrules : expanded_rules)
             {
                 auto leftmost_rule = subrules.front();
 
+                //If leftmost is a terminal rule, just add the rule
+                //and move on
                 if (rules.find(leftmost_rule) == std::end(rules)) {
-                    expanded_rules2.push_back(subrules);
+                    current_expanded_rules.push_back(subrules);
                 }
                 else
                 {
+                    //remove the first and expand it
                     subrules.pop_front();
+
                     auto [first, last] = rules.equal_range(leftmost_rule);
-                    for(; first != last; ++first)
+                    //we don't to search when the current subrules
+                    //size is greater than the current entry size
+                    for(; first != last && subrules.size() <= entry_rules.size(); ++first)
                     {
                         auto new_subrules = subrules;
                         auto s = first->second;
                         for(auto r = s.rbegin(); r != s.rend(); ++r)
+                        {
                             new_subrules.push_front(*r);
-                        expanded_rules2.push_back(new_subrules);
+                        }
+                        current_expanded_rules.push_back(new_subrules);
+                    }
+
+                    //If we have a cycle we will expand as many times
+                    //as necessary. It depends on the entry's size
+                    auto cyclic_subrule = cyclic_rules.find(leftmost_rule);
+                    if(cyclic_subrule != cyclic_rules.end())
+                    {
+                        auto c = cyclic_subrule->second;
+                        int n_expansion = std::sqrt(entry.size());
+                        for(int i = 2; i < n_expansion; ++i)
+                        {
+                            std::list<int> v;
+                            for(auto subrule: c)
+                            {
+                                std::fill_n(std::back_inserter(v), i, subrule);
+                            }
+
+                            std::copy(subrules.begin(), subrules.end(), std::back_inserter(v));
+                            current_expanded_rules.push_back(v);
+                        }
                     }
                 }
             }
 
-            expanded_rules = expanded_rules2;
+            expanded_rules = current_expanded_rules;
 
             print_expanded_rules(expanded_rules, "middle");
 
@@ -147,35 +206,44 @@ int main(int argc, char *argv[])
                                                                          return rules.find(subrules.front()) == std::end(rules);
                                                                      });
 
-            // print_container(entry_rules);
-            if(all_leftmost_rules_are_terminal)
+            // print_container(entry_rules); If all leftmost rules in
+
+            if(!all_leftmost_rules_are_terminal)
+                continue;
+
+            //all expanded_rules are a terminal rule we can compare
+            //against the current entry
+            auto it = std::remove_if(std::begin(expanded_rules), std::end(expanded_rules), [&entry_rules](auto &subrules)
             {
-                auto it = std::remove_if(std::begin(expanded_rules), std::end(expanded_rules), [&entry_rules](auto &subrules)
-                {
-                    auto leftmost_entry = entry_rules.front();
-                    auto leftmost_rule = subrules.front();
-                    bool match = leftmost_entry == leftmost_rule;
-                    if(match)
-                        subrules.pop_front();
-                    return !match;
-                });
-                expanded_rules.erase(it, expanded_rules.end());
-                if(!expanded_rules.empty())
-                {
-                    entry_rules.pop_front();
-                    auto it = std::remove_if(std::begin(expanded_rules), std::end(expanded_rules), [&entry_rules](auto &subrules)
-                    {
-                        return subrules.empty();
-                    });
-                    expanded_rules.erase(it, expanded_rules.end());
-                }
-            }
+                auto leftmost_entry = entry_rules.front();
+                auto leftmost_rule = subrules.front();
+                bool match = leftmost_entry == leftmost_rule;
+                if(match)
+                    subrules.pop_front();
+                return !match;
+            });
 
-            print_expanded_rules(expanded_rules, "after");
+            expanded_rules.erase(it, expanded_rules.end());
+
+            //no more rules to expand, so no need to continue to search;
+            if(expanded_rules.empty())
+                break;
+
+            entry_rules.pop_front();
+            auto result = std::count_if(std::begin(expanded_rules), std::end(expanded_rules), [&entry_rules](auto &subrules)
+            {
+                return subrules.empty();
+            });
+
+            if(entry_rules.empty() && result == 1)
+                ++count;
+
+            auto empty_subrule_it = std::remove_if(std::begin(expanded_rules), std::end(expanded_rules), [&entry_rules](auto &subrules)
+            {
+                return subrules.empty();
+            });
+            expanded_rules.erase(empty_subrule_it, expanded_rules.end());
         }
-
-        if(entry_rules.empty() && expanded_rules.empty())
-            ++count;
     }
 
     std::cout << "Part 1: " << count << "\n";
