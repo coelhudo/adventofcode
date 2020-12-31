@@ -294,6 +294,11 @@ int main(int argc, char *argv[])
     std::cout << "Part 1: " << answer << '\n';
 
     //Second pass: rotate to correct pos
+    //Select one of the corners as the first reference tile
+    //Rotate to the correct position of upper left corner tile
+    //Fix all neighbours
+    //Visit each neighbour and correct the tile
+    //Stop when all tiles have been visited
     for(auto tile : tiles)
     {
         if(tile.neighbours.size() == 2)
