@@ -99,13 +99,37 @@ struct Tile
     {
     }
 
-    bool assign_matches(std::string const& side) const {
-        return side == upside() || side == downside() || side == leftside() || side == rightside();
+    bool matches(Tile const& tile) {
+        if(tile.upside() == upside() || tile.downside() == upside() || tile.leftside() == upside() || tile.rightside() == upside())
+        {
+            upside_neighbour = &tile;
+        }
+        else if(tile.upside() == downside() || tile.downside() == downside() || tile.leftside() == downside() || tile.rightside() == downside())
+        {
+            downside_neighbour = &tile;
+        }
+        else if(tile.upside() == leftside() || tile.downside() == leftside() || tile.leftside() == leftside() || tile.rightside() == leftside())
+        {
+            leftside_neighbour = &tile;
+        }
+        else if(tile.upside() == rightside() || tile.downside() == rightside() || tile.leftside() == rightside() || tile.rightside() == rightside())
+        {
+            rightside_neighbour = &tile;
+        }
+        else
+        {
+            return false;
+        }
+
+        return true;
     }
 
-    bool assign_matches_reversed(std::string side) const {
-        std::reverse(side.begin(), side.end());
-        return assign_matches(side);
+    bool matches_flipped(Tile tile) {
+        tile.horizontal_flip();
+        if(matches(tile))
+           return true;
+        tile.vertical_flip();
+        return matches(tile);
     }
 
     bool operator<(Tile const&other) const
@@ -182,11 +206,28 @@ struct Tile
         core.vertical_flip();
     }
 
+    int n_neighbours() const
+    {
+        int total{};
+        if(upside_neighbour)
+            ++total;
+        if(downside_neighbour)
+            ++total;
+        if(leftside_neighbour)
+            ++total;
+        if(rightside_neighbour)
+            ++total;
+        return total;
+    }
+
     int id;
     int base{0};
     std::array<std::string, 4> sides;
     TileCore core;
-    std::set<Tile*> neighbours;
+    Tile const *upside_neighbour{nullptr};
+    Tile const *downside_neighbour{nullptr};
+    Tile const *leftside_neighbour{nullptr};
+    Tile const *rightside_neighbour{nullptr};
 };
 
 std::ostream &operator<<(std::ostream &os, Tile const& tile)
@@ -269,17 +310,8 @@ int main(int argc, char *argv[])
             if(tile.id == current_tile.id)
                 continue;
 
-            if(current_tile.assign_matches(tile.upside()) || current_tile.assign_matches(tile.downside()) ||
-               current_tile.assign_matches(tile.leftside()) || current_tile.assign_matches(tile.rightside()))
-            {
-                tile.neighbours.insert(&current_tile);
-            }
-            else if(current_tile.assign_matches_reversed(tile.upside()) || current_tile.assign_matches_reversed(tile.downside()) ||
-                    current_tile.assign_matches_reversed(tile.leftside()) || current_tile.assign_matches_reversed(tile.rightside()))
-            {
-                tile.neighbours.insert(&current_tile);
-            }
-
+            if(!tile.matches(current_tile))
+                tile.matches_flipped(current_tile);
         }
     }
 
@@ -287,7 +319,7 @@ int main(int argc, char *argv[])
     std::size_t answer{1};
     for(auto tile : tiles)
     {
-        if(tile.neighbours.size() == 2)
+        if(tile.n_neighbours() == 2)
             answer *= tile.id;
     }
 
@@ -299,31 +331,12 @@ int main(int argc, char *argv[])
     //Fix all neighbours
     //Visit each neighbour and correct the tile
     //Stop when all tiles have been visited
-    for(auto tile : tiles)
-    {
-        if(tile.neighbours.size() == 2)
-        {
-            // std::cout << "Tile =============\n";
-            // std::cout << tile << "\n";
-            // std::cout << "Neighbours =============\n";
-            // for(auto side: tile.neighbours)
-            //     std::cout << *side << '\n';
-            // std::cout << "=============\n";
-        }
-    }
+    // auto current_tile_it = std::find_if(tiles.begin(), tiles.end(), [](Tile const& tile)
+    // {
+    //     return tile.n_neighbours() == 2;
+    // });
 
-    std::cout << tiles.at(0) << '\n';
-    // tiles.at(0).rotate(1);
-    // std::cout << tiles.at(0) << '\n';
-    // tiles.at(0).rotate(1);
-    // std::cout << tiles.at(0) << '\n';
-    // tiles.at(0).rotate(1);
-    // std::cout << tiles.at(0) << '\n';
-    // tiles.at(0).rotate(1);
-    // std::cout << tiles.at(0) << '\n';
-
-    tiles.at(0).horizontal_flip();
-    std::cout << tiles.at(0) << '\n';
+    // std::set<int> visited_tiles_id;
 
     return 0;
 }
