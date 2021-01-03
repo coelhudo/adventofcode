@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstddef>
 #include <iostream>
 #include <fstream>
 #include <cassert>
@@ -102,19 +103,19 @@ struct Tile
     bool matches(Tile & tile) {
         if(tile.upside() == upside() || tile.downside() == upside() || tile.leftside() == upside() || tile.rightside() == upside())
         {
-            upside_neighbour() = &tile;
+            upside_neighbour(&tile);
         }
         else if(tile.upside() == downside() || tile.downside() == downside() || tile.leftside() == downside() || tile.rightside() == downside())
         {
-            downside_neighbour() = &tile;
+            downside_neighbour(&tile);
         }
         else if(tile.upside() == leftside() || tile.downside() == leftside() || tile.leftside() == leftside() || tile.rightside() == leftside())
         {
-            leftside_neighbour() = &tile;
+            leftside_neighbour(&tile);
         }
         else if(tile.upside() == rightside() || tile.downside() == rightside() || tile.leftside() == rightside() || tile.rightside() == rightside())
         {
-            rightside_neighbour() = &tile;
+            rightside_neighbour(&tile);
         }
         else
         {
@@ -197,24 +198,44 @@ struct Tile
         return neighbours.at((base + 3) % 4);
     }
 
-    Tile*& upside_neighbour()
+    Tile * upside_neighbour()
     {
         return neighbours.at(base % 4);
     }
 
-    Tile*& rightside_neighbour()
+    Tile * rightside_neighbour()
     {
         return neighbours.at((base + 1) % 4);
     }
 
-    Tile*& downside_neighbour()
+    Tile * downside_neighbour()
     {
         return neighbours.at((base + 2) % 4);
     }
 
-    Tile*& leftside_neighbour()
+    Tile * leftside_neighbour()
     {
         return neighbours.at((base + 3) % 4);
+    }
+
+    void upside_neighbour(Tile *tile)
+    {
+        neighbours.at(base % 4) = tile;
+    }
+
+    void rightside_neighbour(Tile *tile)
+    {
+        neighbours.at((base + 1) % 4) = tile;
+    }
+
+    void downside_neighbour(Tile *tile)
+    {
+        neighbours.at((base + 2) % 4) = tile;
+    }
+
+    void leftside_neighbour(Tile *tile)
+    {
+        neighbours.at((base + 3) % 4) = tile;
     }
 
     void rotate(int times)
@@ -227,7 +248,7 @@ struct Tile
     void horizontal_flip()
     {
         std::swap(rightside(), leftside());
-        std::swap(rightside_neighbour(), leftside_neighbour());
+        // std::swap(rightside_neighbour(), leftside_neighbour());
         auto &up = upside();
         std::reverse(up.begin(), up.end());
         auto &down = downside();
@@ -239,7 +260,7 @@ struct Tile
     void vertical_flip()
     {
         std::swap(upside(), downside());
-        std::swap(upside_neighbour(), downside_neighbour());
+        // std::swap(upside_neighbour(), downside_neighbour();
         auto &left = leftside();
         std::reverse(left.begin(), left.end());
         auto &right = rightside();
@@ -280,6 +301,26 @@ std::ostream &operator<<(std::ostream &os, Tile const& tile)
 
     return os;
 }
+
+struct TileVisitor
+{
+    void visit(Tile *tile)
+    {
+        if(tile == nullptr || visited_tiles_id.find(tile->id) != visited_tiles_id.cend())
+            return;
+
+        std::cout << "visiting " << tile->id << '\n';
+        visited_tiles_id.insert(tile->id);
+        // TODO: check which sides are neighbouring. If they are
+        // correct do nothing. Otherwise correct them (rotate or flip)
+        visit(tile->upside_neighbour());
+        visit(tile->rightside_neighbour());
+        visit(tile->downside_neighbour());
+        visit(tile->leftside_neighbour());
+    }
+
+    std::set<int> visited_tiles_id;
+};
 
 int main(int argc, char *argv[])
 {
@@ -357,7 +398,6 @@ int main(int argc, char *argv[])
 
     // Second pass: rotate and/or flip to correct pos
     // Select one of the corners as the first reference tile
-    // Rotate to the correct position of upper left corner tile
     // Fix all neighbours
     // Visit each neighbour and correct the tile
     // Stop when all tiles have been visited
@@ -366,7 +406,7 @@ int main(int argc, char *argv[])
         return tile.n_neighbours() == 2;
     });
 
-    // std::cout << *current_tile_it << '\n';
+    std::cout << *current_tile_it << '\n';
     // if(current_tile_it->upside_neighbour() && current_tile_it->rightside_neighbour())
     // {
     //     std::cout << "Up/Right" << "\n";
@@ -400,9 +440,8 @@ int main(int argc, char *argv[])
     //     exit(1);
     // }
 
-    // std::cout << *current_tile_it << '\n';
-
-    // std::set<int> visited_tiles_id;
+    TileVisitor tile_visitor;
+    tile_visitor.visit(&*current_tile_it);
 
     return 0;
 }
