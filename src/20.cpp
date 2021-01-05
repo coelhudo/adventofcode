@@ -461,6 +461,7 @@ struct FixTileVisitor: public TileVisitor
     }
 };
 
+
 int main(int argc, char *argv[])
 {
     assert(("expect input", argc == 2));
@@ -525,8 +526,35 @@ int main(int argc, char *argv[])
     FixTileVisitor tile_visitor;
     tile_visitor.visit(&*current_tile_it);
 
-    TileVisitor tv;
-    tv.visit(&*current_tile_it);
+    // TileVisitor tv;
+    // tv.visit(&*current_tile_it);
+
+    auto topleft_tile = *std::find_if(tiles.begin(), tiles.end(), [](Tile const& tile)
+    {
+        return tile.downside_neighbour() && tile.rightside_neighbour() && tile.upside_neighbour() == nullptr && tile.leftside_neighbour() == nullptr;
+    });
+
+    // std::cout << topleft_tile << '\n';
+    std::ostringstream oss;
+    for(auto vcurrent = &topleft_tile; vcurrent != nullptr; vcurrent = vcurrent->downside_neighbour())
+    {
+        for(int i = 1; i < 9; ++i)
+        {
+            std::ostringstream line;
+            for(int j = 1; j < 9; ++j)
+                line << vcurrent->core(i, j);
+            for(auto hcurrent = vcurrent->rightside_neighbour(); hcurrent != nullptr; hcurrent = hcurrent->rightside_neighbour())
+            {
+                for(int j = 1; j < 9; ++j)
+                    line << hcurrent->core(i, j);
+            }
+            oss << line.str();
+        }
+    }
+
+    TileCore t{24, oss.str()};
+    t.vertical_flip();
+    std::cout << t << '\n';
 
     return 0;
 }
