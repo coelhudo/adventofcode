@@ -358,56 +358,68 @@ struct FixTileVisitor: public TileVisitor
 {
     void process(Tile *tile) const override
     {
-        const bool correct_position = correct_upside_neighbour(tile) || correct_rightside_neighbour(tile) ||
-            correct_downside_neighbour(tile) || correct_leftside_neighbour(tile);
-        if(tile->upside_neighbour() && !correct_position)
-        {
-            auto neighbour_fixed = std::bind(&FixTileVisitor::correct_upside_neighbour, *this, tile);
-            auto upside_neighbour = [&tile]{ return tile->upside_neighbour();};
-            if(!fix(upside_neighbour, neighbour_fixed))
-            {
-                std::cout << "fixing neighbours of " << tile->id << '\n';
-                std::cout << "must fix upside neighbour\n";
-                std::cout << *tile << '\n';
-                std::cout << *tile->upside_neighbour() << '\n';
-            }
-        }
-        else if(tile->rightside_neighbour() && !correct_position)
-        {
-            auto neighbour_fixed = std::bind(&FixTileVisitor::correct_rightside_neighbour, *this, tile);
-            auto rightside_neighbour = [&tile]{ return tile->rightside_neighbour();};
-            if(!fix(rightside_neighbour, neighbour_fixed))
-            {
-                std::cout << "fixing neighbours of " << tile->id << '\n';
-                std::cout << "must fix righside neighbour\n";
-                std::cout << *tile << '\n';
-                std::cout << *tile->rightside_neighbour() << '\n';
-            }
-        }
-        else if(tile->downside_neighbour() && !correct_position)
-        {
-            auto neighbour_fixed = std::bind(&FixTileVisitor::correct_downside_neighbour, *this, tile);
-            auto downside_neighbour = [&tile]{ return tile->downside_neighbour();};
-            if(!fix(downside_neighbour, neighbour_fixed))
-            {
-                std::cout << "fixing neighbours of " << tile->id << '\n';
-                std::cout << "must fix downside neighbour\n";
-                std::cout << *tile << '\n';
-                std::cout << *tile->downside_neighbour() << '\n';
-            }
-        }
-        else if(tile->leftside_neighbour() && !correct_position)
-        {
-            auto neighbour_fixed = std::bind(&FixTileVisitor::correct_leftside_neighbour, *this, tile);
-            auto leftside_neighbour = [&tile]{ return tile->leftside_neighbour();};
-            if(!fix(leftside_neighbour, neighbour_fixed))
-            {
-                std::cout << "fixing neighbours of " << tile->id << '\n';
-                std::cout << "must fix leftside neighbour\n";
-                std::cout << *tile << '\n';
-                std::cout << *tile->leftside_neighbour() << '\n';
-            }
+        std::cout << tile->id << '\n';
+        auto correct_upside_neighbour = [&tile]{ return tile->upside() == tile->upside_neighbour()->downside();};
+        auto correct_rightside_neighbour = [&tile]{ return tile->rightside() == tile->rightside_neighbour()->leftside();};
+        auto correct_downside_neighbour = [&tile]{ return tile->downside() == tile->downside_neighbour()->upside();};
+        auto correct_leftside_neighbour = [&tile]{ return tile->leftside() == tile->leftside_neighbour()->rightside();};
 
+        if(tile->upside_neighbour() && !correct_upside_neighbour())
+        {
+            auto upside_neighbour = [&tile]{ return tile->upside_neighbour();};
+            std::cout << "fixing neighbours of " << tile->id << '\n';
+            std::cout << "must fix upside neighbour\n";
+            fix(upside_neighbour, correct_upside_neighbour);
+            // if(!fix(upside_neighbour, neighbour_fixed))
+            // {
+            //     std::cout << "fixing neighbours of " << tile->id << '\n';
+            //     std::cout << "must fix upside neighbour\n";
+            //     std::cout << *tile << '\n';
+            //     std::cout << *tile->upside_neighbour() << '\n';
+            // }
+        }
+
+        if(tile->rightside_neighbour() && !correct_rightside_neighbour())
+        {
+            auto rightside_neighbour = [&tile]{ return tile->rightside_neighbour();};
+            std::cout << "fixing neighbours of " << tile->id << '\n';
+            std::cout << "must fix righside neighbour\n";
+            fix(rightside_neighbour, correct_rightside_neighbour);
+            // if(!fix(rightside_neighbour, neighbour_fixed))
+            // {
+            //     std::cout << "fixing neighbours of " << tile->id << '\n';
+            //     std::cout << "must fix righside neighbour\n";
+            //     std::cout << *tile << '\n';
+            //     std::cout << *tile->rightside_neighbour() << '\n';
+            // }
+        }
+        if(tile->downside_neighbour() && !correct_downside_neighbour())
+        {
+            auto downside_neighbour = [&tile]{ return tile->downside_neighbour();};
+            std::cout << "fixing neighbours of " << tile->id << '\n';
+            std::cout << "must fix downside neighbour\n";
+            fix(downside_neighbour, correct_downside_neighbour);
+            // if(!fix(downside_neighbour, neighbour_fixed))
+            // {
+            //     std::cout << "fixing neighbours of " << tile->id << '\n';
+            //     std::cout << "must fix downside neighbour\n";
+            //     std::cout << *tile << '\n';
+            //     std::cout << *tile->downside_neighbour() << '\n';
+            // }
+        }
+
+        if(tile->leftside_neighbour() && !correct_leftside_neighbour())
+        {
+            auto leftside_neighbour = [&tile]{ return tile->leftside_neighbour();};
+            std::cout << "fixing neighbours of " << tile->id << '\n';
+            std::cout << "must fix leftside neighbour\n";
+            fix(leftside_neighbour, correct_leftside_neighbour);
+            // {
+            //     std::cout << "fixing neighbours of " << tile->id << '\n';
+            //     std::cout << "must fix leftside neighbour\n";
+            //     std::cout << *tile << '\n';
+            //     std::cout << *tile->leftside_neighbour() << '\n';
+            // }
         }
     }
 
