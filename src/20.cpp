@@ -13,7 +13,6 @@
 #include <sstream>
 #include <functional>
 
-
 struct TileCore
 {
     explicit TileCore(int side_length, std::string const& core) : side_length{side_length},
@@ -103,18 +102,26 @@ struct Tile
     bool matches(Tile & tile) {
         if(tile.upside() == upside() || tile.downside() == upside() || tile.leftside() == upside() || tile.rightside() == upside())
         {
+            // std::cout << id << " -> " << tile.id << " | ";
+            // std::cout << upside() << ": " << tile.upside() << ", " << tile.downside() << ", " << tile.leftside() << ", " << tile.rightside() << '\n';
             upside_neighbour(&tile);
         }
         else if(tile.upside() == downside() || tile.downside() == downside() || tile.leftside() == downside() || tile.rightside() == downside())
         {
+            // std::cout << id << " -> " << tile.id << " | ";
+            // std::cout << downside() << ": " << tile.upside() << ", " << tile.downside() << ", " << tile.leftside() << ", " << tile.rightside() << '\n';
             downside_neighbour(&tile);
         }
         else if(tile.upside() == leftside() || tile.downside() == leftside() || tile.leftside() == leftside() || tile.rightside() == leftside())
         {
+            // std::cout << id << " -> " << tile.id << " | ";
+            // std::cout << leftside() << ": " << tile.upside() << ", " << tile.downside() << ", " << tile.leftside() << ", " << tile.rightside() << '\n';
             leftside_neighbour(&tile);
         }
         else if(tile.upside() == rightside() || tile.downside() == rightside() || tile.leftside() == rightside() || tile.rightside() == rightside())
         {
+            // std::cout << id << " -> " << tile.id << " | ";
+            // std::cout << rightside() << ": " << tile.upside() << ", " << tile.downside() << ", " << tile.leftside() << ", " << tile.rightside() << '\n';
             rightside_neighbour(&tile);
         }
         else
@@ -125,10 +132,10 @@ struct Tile
         return true;
     }
 
-    bool matches_flipped(Tile tile) {
+    bool matches_flipped(Tile & tile) {
         tile.horizontal_flip();
         if(matches(tile))
-           return true;
+            return true;
         tile.vertical_flip();
         return matches(tile);
     }
@@ -220,35 +227,41 @@ struct Tile
 
     void upside_neighbour(Tile *tile)
     {
+        possible_neighbours.at(base % 4).push_back(tile);
         neighbours.at(base % 4) = tile;
     }
 
     void rightside_neighbour(Tile *tile)
     {
-        neighbours.at((base + 1) % 4) = tile;
+        possible_neighbours.at((base + 1) % 4).push_back(tile);
+        neighbours.at((base + 1) % 4)= tile;
     }
 
     void downside_neighbour(Tile *tile)
     {
+        possible_neighbours.at((base + 2) % 4).push_back(tile);
         neighbours.at((base + 2) % 4) = tile;
     }
 
     void leftside_neighbour(Tile *tile)
     {
+        possible_neighbours.at((base + 3) % 4).push_back(tile);
         neighbours.at((base + 3) % 4) = tile;
     }
 
     void rotate(int times)
     {
-        base = (base + times) % 4;
-
+        base = base + ((4 - times) % 4);
         core.rotate(times);
     }
 
     void horizontal_flip()
     {
         std::swap(rightside(), leftside());
-        // std::swap(rightside_neighbour(), leftside_neighbour());
+        auto rn = rightside_neighbour();
+        auto ln = leftside_neighbour();
+        rightside_neighbour(ln);
+        leftside_neighbour(rn);
         auto &up = upside();
         std::reverse(up.begin(), up.end());
         auto &down = downside();
@@ -260,7 +273,10 @@ struct Tile
     void vertical_flip()
     {
         std::swap(upside(), downside());
-        // std::swap(upside_neighbour(), downside_neighbour();
+        auto un = upside_neighbour();
+        auto dn = downside_neighbour();
+        upside_neighbour(dn);
+        downside_neighbour(un);
         auto &left = leftside();
         std::reverse(left.begin(), left.end());
         auto &right = rightside();
@@ -279,6 +295,7 @@ struct Tile
     std::array<std::string, 4> sides{};
     TileCore core;
     std::array<Tile*, 4> neighbours{};
+    std::array<std::vector<Tile*>, 4> possible_neighbours{};
 };
 
 std::ostream &operator<<(std::ostream &os, Tile const& tile)
@@ -304,22 +321,169 @@ std::ostream &operator<<(std::ostream &os, Tile const& tile)
 
 struct TileVisitor
 {
+    virtual ~TileVisitor() {}
+
     void visit(Tile *tile)
     {
         if(tile == nullptr || visited_tiles_id.find(tile->id) != visited_tiles_id.cend())
             return;
 
-        std::cout << "visiting " << tile->id << '\n';
+        process(tile);
         visited_tiles_id.insert(tile->id);
-        // TODO: check which sides are neighbouring. If they are
-        // correct do nothing. Otherwise correct them (rotate or flip)
+
         visit(tile->upside_neighbour());
         visit(tile->rightside_neighbour());
         visit(tile->downside_neighbour());
         visit(tile->leftside_neighbour());
     }
 
+    virtual void process(Tile *tile) const
+    {
+        std::cout << "processed " << tile->id << '\n';
+
+        if(tile->upside_neighbour())
+            std::cout << "  upside neighbour " << tile->upside_neighbour()->id << '\n';
+        if(tile->rightside_neighbour())
+            std::cout << "  rightside neighbour " << tile->rightside_neighbour()->id << '\n';
+        if(tile->downside_neighbour())
+            std::cout << "  downside neighbour " << tile->downside_neighbour()->id << '\n';
+        if(tile->leftside_neighbour())
+            std::cout << "  leftside neighbour " << tile->leftside_neighbour()->id << '\n';
+    }
+
     std::set<int> visited_tiles_id;
+};
+
+struct FixTileVisitor: public TileVisitor
+{
+    void process(Tile *tile) const override
+    {
+        const bool correct_position = correct_upside_neighbour(tile) || correct_rightside_neighbour(tile) ||
+            correct_downside_neighbour(tile) || correct_leftside_neighbour(tile);
+        if(tile->upside_neighbour() && !correct_position)
+        {
+            auto neighbour_fixed = std::bind(&FixTileVisitor::correct_upside_neighbour, *this, tile);
+            auto upside_neighbour = [&tile]{ return tile->upside_neighbour();};
+            if(!fix(upside_neighbour, neighbour_fixed))
+            {
+                std::cout << "fixing neighbours of " << tile->id << '\n';
+                std::cout << "must fix upside neighbour\n";
+                std::cout << *tile << '\n';
+                std::cout << *tile->upside_neighbour() << '\n';
+            }
+        }
+        else if(tile->rightside_neighbour() && !correct_position)
+        {
+            auto neighbour_fixed = std::bind(&FixTileVisitor::correct_rightside_neighbour, *this, tile);
+            auto rightside_neighbour = [&tile]{ return tile->rightside_neighbour();};
+            if(!fix(rightside_neighbour, neighbour_fixed))
+            {
+                std::cout << "fixing neighbours of " << tile->id << '\n';
+                std::cout << "must fix righside neighbour\n";
+                std::cout << *tile << '\n';
+                std::cout << *tile->rightside_neighbour() << '\n';
+            }
+        }
+        else if(tile->downside_neighbour() && !correct_position)
+        {
+            auto neighbour_fixed = std::bind(&FixTileVisitor::correct_downside_neighbour, *this, tile);
+            auto downside_neighbour = [&tile]{ return tile->downside_neighbour();};
+            if(!fix(downside_neighbour, neighbour_fixed))
+            {
+                std::cout << "fixing neighbours of " << tile->id << '\n';
+                std::cout << "must fix downside neighbour\n";
+                std::cout << *tile << '\n';
+                std::cout << *tile->downside_neighbour() << '\n';
+            }
+        }
+        else if(tile->leftside_neighbour() && !correct_position)
+        {
+            auto neighbour_fixed = std::bind(&FixTileVisitor::correct_leftside_neighbour, *this, tile);
+            auto leftside_neighbour = [&tile]{ return tile->leftside_neighbour();};
+            if(!fix(leftside_neighbour, neighbour_fixed))
+            {
+                std::cout << "fixing neighbours of " << tile->id << '\n';
+                std::cout << "must fix leftside neighbour\n";
+                std::cout << *tile << '\n';
+                std::cout << *tile->leftside_neighbour() << '\n';
+            }
+
+        }
+    }
+
+    bool fix(std::function<Tile*()> neighbour, std::function<bool()> correct_position) const
+    {
+        Tile *current_neighbour = neighbour();
+        current_neighbour->horizontal_flip();
+
+        if(correct_position())
+        {
+            // std::cout << "fix by horizontal_flip\n";
+            return true;
+        }
+        current_neighbour->horizontal_flip(); //go back to the original state
+
+        current_neighbour->vertical_flip();
+        if(correct_position())
+        {
+            // std::cout << "fix by vertical flip\n";
+            return true;
+        }
+        current_neighbour->vertical_flip(); //go back to the original state
+
+        for(int i = 0; i < 5 && !correct_position(); ++i) //we rotate 4 times since when the rotation doesn't fix we go back to the original position
+            current_neighbour->rotate(1);
+
+        if(correct_position())
+        {
+            // std::cout << "fix by rotation\n";
+            return true;
+        }
+
+        current_neighbour->horizontal_flip();
+        for(int i = 0; i < 5 && !correct_position(); ++i) //we rotate 4 times since when the rotation doesn't fix we go back to the original position
+            current_neighbour->rotate(1);
+
+        if(correct_position())
+        {
+            // std::cout << "fix by horizontal flip + rotation\n";
+            return true;
+        }
+        current_neighbour->horizontal_flip(); //go back to the original state
+
+        current_neighbour->vertical_flip();
+        for(int i = 0; i < 5 && !correct_position(); ++i) //we rotate 4 times since when the rotation doesn't fix we go back to the original position
+            current_neighbour->rotate(1);
+
+        if(correct_position())
+        {
+            // std::cout << "fix by vertical flip + rotation \n";
+            return true;
+        }
+
+        return false;
+    }
+
+
+    bool correct_upside_neighbour(Tile *tile) const
+    {
+        return tile->upside_neighbour() && tile->upside() == tile->upside_neighbour()->downside();
+    }
+
+    bool correct_rightside_neighbour(Tile *tile) const
+    {
+        return tile->rightside_neighbour() && tile->rightside() == tile->rightside_neighbour()->leftside();
+    }
+
+    bool correct_downside_neighbour(Tile *tile) const
+    {
+        return tile->downside_neighbour() && tile->downside() == tile->downside_neighbour()->upside();
+    }
+
+    bool correct_leftside_neighbour(Tile *tile) const
+    {
+        return tile->leftside_neighbour() && tile->leftside() == tile->leftside_neighbour()->rightside();
+    }
 };
 
 int main(int argc, char *argv[])
@@ -396,52 +560,16 @@ int main(int argc, char *argv[])
 
     std::cout << "Part 1: " << answer << '\n';
 
-    // Second pass: rotate and/or flip to correct pos
-    // Select one of the corners as the first reference tile
-    // Fix all neighbours
-    // Visit each neighbour and correct the tile
-    // Stop when all tiles have been visited
     auto current_tile_it = std::find_if(tiles.begin(), tiles.end(), [](Tile const& tile)
     {
         return tile.n_neighbours() == 2;
     });
 
-    std::cout << *current_tile_it << '\n';
-    // if(current_tile_it->upside_neighbour() && current_tile_it->rightside_neighbour())
-    // {
-    //     std::cout << "Up/Right" << "\n";
-    //     // std::cout << *current_tile_it->upside_neighbour << '\n';
-    //     // std::cout << *current_tile_it->rightside_neighbour << '\n';
-    //     current_tile_it->rotate(1);
-    // }
-    // else if(current_tile_it->upside_neighbour() && current_tile_it->leftside_neighbour())
-    // {
-    //     std::cout << "Up/Left" << "\n";
-    //     // std::cout << *current_tile_it->upside_neighbour << '\n';
-    //     // std::cout << *current_tile_it->leftside_neighbour << '\n';
-    //     current_tile_it->rotate(2);
-    // }
-    // else if(current_tile_it->downside_neighbour() && current_tile_it->rightside_neighbour())
-    // {
-    //     // no rotation required here
-    //     std::cout << "Down/Right" << "\n";
-    //     // std::cout << *current_tile_it->downside_neighbour << '\n';
-    //     // std::cout << *current_tile_it->rightside_neighbour << '\n';
-    // }
-    // else if(current_tile_it->downside_neighbour() && current_tile_it->leftside_neighbour())
-    // {
-    //     std::cout << "Down/Left" << "\n";
-    //     // std::cout << *current_tile_it->downside_neighbour << '\n';
-    //     // std::cout << *current_tile_it->leftside_neighbour << '\n';
-    //     current_tile_it->rotate(3);
-    // }
-    // else
-    // {
-    //     exit(1);
-    // }
-
-    TileVisitor tile_visitor;
+    FixTileVisitor tile_visitor;
     tile_visitor.visit(&*current_tile_it);
+
+    TileVisitor tv;
+    tv.visit(&*current_tile_it);
 
     return 0;
 }
