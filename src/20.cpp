@@ -18,6 +18,10 @@ struct TileCore
     explicit TileCore(int side_length, std::string const& core) : side_length{side_length},
                                                                   core{core}
     {
+        _upside.resize(10);
+        _rightside.resize(10);
+        _downside.resize(10);
+        _leftside.resize(10);
     }
 
     TileCore() = default;
@@ -52,8 +56,14 @@ struct TileCore
         return core[new_row * side_length + new_column];
     }
 
-    std::pair<int, int> index(int row, int column) const
+    std::pair<int, int> index(int _row, int _column) const
     {
+        int row = _row;
+        int column = _column;
+        if(h_flipped)
+            column = side_length - _column - 1;
+        if(v_flipped)
+            row = side_length - _row - 1;
         switch(base)
         {
         case 0:
@@ -72,67 +82,88 @@ struct TileCore
     void rotate(int times)
     {
         base = (base + times) % 4;
+        invalid_cache();
     }
 
     void horizontal_flip()
     {
-        TileCore copy{*this};
-        for(int i = 0, icopy = 0; i < side_length; ++i, ++icopy)
-        {
-            for(int j = 0, jcopy = side_length - 1; j < side_length; ++j, --jcopy)
-            {
-                this->operator()(icopy, jcopy) = copy(i, j);
-            }
-        }
+        h_flipped = !h_flipped;
+        invalid_cache();
     }
 
     void vertical_flip()
     {
-        TileCore copy{*this};
-        for(int i = 0, icopy = side_length - 1; i < side_length; ++i, --icopy)
+        v_flipped = !v_flipped;
+        invalid_cache();
+    }
+
+    void invalid_cache()
+    {
+        invalid_upside = true;
+        invalid_rightside = true;
+        invalid_downside = true;
+        invalid_leftside = true;
+    }
+
+    std::string const& upside() const
+    {
+        if(invalid_upside)
         {
-            for(int j = 0, jcopy = 0; j < side_length; ++j, ++jcopy)
-            {
-                this->operator()(icopy, jcopy) = copy(i, j);
-            }
+            for(int i = 0; i < side_length; ++i)
+                _upside[i] = this->operator()(0, i);
+            invalid_upside = false;
         }
+
+        return _upside;
     }
 
-    std::string upside() const
+    std::string const& rightside() const
     {
-        std::string upside(10, ' ');
-        for(int i = 0; i < side_length; ++i)
-            upside[i] = this->operator()(0, i);
-        return upside;
+        if(invalid_rightside)
+        {
+            for(int i = 0; i < side_length; ++i)
+                _rightside[i] = this->operator()(i, 9);
+            invalid_rightside = false;
+        }
+
+        return _rightside;
     }
 
-    std::string rightside() const
+    std::string const& downside() const
     {
-        std::string rightside(10, ' ');
-        for(int i = 0; i < side_length; ++i)
-            rightside[i] = this->operator()(i, 9);
-        return rightside;
+        if(invalid_downside) {
+            for(int i = 0; i < side_length; ++i)
+                _downside[i] = this->operator()(9, i);
+            invalid_downside = false;
+        }
+        return _downside;
     }
 
-    std::string downside() const
+    std::string const& leftside() const
     {
-        std::string downside(10, ' ');
-        for(int i = 0; i < side_length; ++i)
-            downside[i] = this->operator()(9, i);
-        return downside;
-    }
+        if(invalid_leftside)
+        {
+            for(int i = 0; i < side_length; ++i)
+                _leftside[i] = this->operator()(i, 0);
+            invalid_leftside = false;
+        }
 
-    std::string leftside() const
-    {
-        std::string leftside(10, ' ');
-        for(int i = 0; i < side_length; ++i)
-            leftside[i] = this->operator()(i, 0);
-        return leftside;
+        return _leftside;
     }
 
     int base{0};
     std::string core;
     int side_length;
+    mutable std::string _upside;
+    mutable std::string _rightside;
+    mutable std::string _downside;
+    mutable std::string _leftside;
+    mutable bool invalid_upside{true};
+    mutable bool invalid_downside{true};
+    mutable bool invalid_rightside{true};
+    mutable bool invalid_leftside{true};
+    bool h_flipped{false};
+    bool v_flipped{false};
 };
 
 struct Tile
@@ -146,26 +177,18 @@ struct Tile
     bool matches(Tile & tile) {
         if(tile.upside() == upside() || tile.downside() == upside() || tile.leftside() == upside() || tile.rightside() == upside())
         {
-            // std::cout << id << " -> " << tile.id << " | ";
-            // std::cout << upside() << ": " << tile.upside() << ", " << tile.downside() << ", " << tile.leftside() << ", " << tile.rightside() << '\n';
             upside_neighbour(&tile);
         }
         else if(tile.upside() == downside() || tile.downside() == downside() || tile.leftside() == downside() || tile.rightside() == downside())
         {
-            // std::cout << id << " -> " << tile.id << " | ";
-            // std::cout << downside() << ": " << tile.upside() << ", " << tile.downside() << ", " << tile.leftside() << ", " << tile.rightside() << '\n';
             downside_neighbour(&tile);
         }
         else if(tile.upside() == leftside() || tile.downside() == leftside() || tile.leftside() == leftside() || tile.rightside() == leftside())
         {
-            // std::cout << id << " -> " << tile.id << " | ";
-            // std::cout << leftside() << ": " << tile.upside() << ", " << tile.downside() << ", " << tile.leftside() << ", " << tile.rightside() << '\n';
             leftside_neighbour(&tile);
         }
         else if(tile.upside() == rightside() || tile.downside() == rightside() || tile.leftside() == rightside() || tile.rightside() == rightside())
         {
-            // std::cout << id << " -> " << tile.id << " | ";
-            // std::cout << rightside() << ": " << tile.upside() << ", " << tile.downside() << ", " << tile.leftside() << ", " << tile.rightside() << '\n';
             rightside_neighbour(&tile);
         }
         else
@@ -192,22 +215,22 @@ struct Tile
         return id < other.id;
     }
 
-    std::string upside() const
+    std::string const& upside() const
     {
         return core.upside();
     }
 
-    std::string rightside() const
+    std::string const& rightside() const
     {
         return core.rightside();
     }
 
-    std::string downside() const
+    std::string const& downside() const
     {
         return core.downside();
     }
 
-    std::string leftside() const
+    std::string const& leftside() const
     {
         return core.leftside();
     }
@@ -254,25 +277,21 @@ struct Tile
 
     void upside_neighbour(Tile *tile)
     {
-        // possible_neighbours.at(base % 4).push_back(tile);
         neighbours.at(base % 4) = tile;
     }
 
     void rightside_neighbour(Tile *tile)
     {
-        // possible_neighbours.at((base + 1) % 4).push_back(tile);
         neighbours.at((base + 1) % 4)= tile;
     }
 
     void downside_neighbour(Tile *tile)
     {
-        // possible_neighbours.at((base + 2) % 4).push_back(tile);
         neighbours.at((base + 2) % 4) = tile;
     }
 
     void leftside_neighbour(Tile *tile)
     {
-        // possible_neighbours.at((base + 3) % 4).push_back(tile);
         neighbours.at((base + 3) % 4) = tile;
     }
 
@@ -370,7 +389,6 @@ struct FixTileVisitor: public TileVisitor
 {
     void process(Tile *tile) const override
     {
-        std::cout << tile->id << '\n';
         auto correct_upside_neighbour = [&tile]{ return tile->upside() == tile->upside_neighbour()->downside();};
         auto correct_rightside_neighbour = [&tile]{ return tile->rightside() == tile->rightside_neighbour()->leftside();};
         auto correct_downside_neighbour = [&tile]{ return tile->downside() == tile->downside_neighbour()->upside();};
@@ -379,32 +397,24 @@ struct FixTileVisitor: public TileVisitor
         if(tile->upside_neighbour() && !correct_upside_neighbour())
         {
             auto upside_neighbour = [&tile]{ return tile->upside_neighbour();};
-            std::cout << "fixing neighbours of " << tile->id << '\n';
-            std::cout << "    must fix upside neighbour " << tile->upside_neighbour()->id << "\n";
             fix(upside_neighbour, correct_upside_neighbour);
         }
 
         if(tile->rightside_neighbour() && !correct_rightside_neighbour())
         {
             auto rightside_neighbour = [&tile]{ return tile->rightside_neighbour();};
-            std::cout << "fixing neighbours of " << tile->id << '\n';
-            std::cout << "    must fix righside neighbour " << tile->rightside_neighbour()->id << "\n";
             fix(rightside_neighbour, correct_rightside_neighbour);
         }
 
         if(tile->downside_neighbour() && !correct_downside_neighbour())
         {
             auto downside_neighbour = [&tile]{ return tile->downside_neighbour();};
-            std::cout << "fixing neighbours of " << tile->id << '\n';
-            std::cout << "    must fix downside neighbour " << tile->downside_neighbour()->id << "\n";
             fix(downside_neighbour, correct_downside_neighbour);
         }
 
         if(tile->leftside_neighbour() && !correct_leftside_neighbour())
         {
             auto leftside_neighbour = [&tile]{ return tile->leftside_neighbour();};
-            std::cout << "fixing neighbours of " << tile->id << '\n';
-            std::cout << "    must fix leftside neighbour " << tile->leftside_neighbour()->id << "\n";
             fix(leftside_neighbour, correct_leftside_neighbour);
         }
     }
@@ -415,38 +425,29 @@ struct FixTileVisitor: public TileVisitor
         current_neighbour->horizontal_flip();
 
         if(correct_position())
-        {
-            std::cout << "fix by horizontal_flip\n";
             return true;
-        }
+
         current_neighbour->horizontal_flip(); //go back to the original state
 
         current_neighbour->vertical_flip();
         if(correct_position())
-        {
-            std::cout << "fix by vertical flip\n";
             return true;
-        }
+
         current_neighbour->vertical_flip(); //go back to the original state
 
         for(int i = 0; i < 5 && !correct_position(); ++i) //we rotate 4 times since when the rotation doesn't fix we go back to the original position
             current_neighbour->rotate(1);
 
         if(correct_position())
-        {
-            std::cout << "fix by rotation\n";
             return true;
-        }
 
         current_neighbour->horizontal_flip();
         for(int i = 0; i < 5 && !correct_position(); ++i) //we rotate 4 times since when the rotation doesn't fix we go back to the original position
             current_neighbour->rotate(1);
 
         if(correct_position())
-        {
-            std::cout << "fix by horizontal flip + rotation\n";
             return true;
-        }
+
         current_neighbour->horizontal_flip(); //go back to the original state
 
         current_neighbour->vertical_flip();
@@ -454,10 +455,7 @@ struct FixTileVisitor: public TileVisitor
             current_neighbour->rotate(1);
 
         if(correct_position())
-        {
-            std::cout << "fix by vertical flip + rotation \n";
             return true;
-        }
 
         return false;
     }
@@ -497,11 +495,6 @@ int main(int argc, char *argv[])
         tiles.emplace_back(tile_id, TileCore{10, core.str()});
     }
 
-    // for(auto tile: tiles)
-    // {
-    //     std::cout << tile;
-    // }
-
     for(auto &tile: tiles)
     {
         for(auto &current_tile: tiles)
@@ -514,7 +507,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    //First pass: find neighbouring tiles
+    // First pass: find neighbouring tiles
     std::size_t answer{1};
     for(auto tile : tiles)
     {
@@ -528,15 +521,6 @@ int main(int argc, char *argv[])
     {
         return tile.n_neighbours() == 2;
     });
-
-    // std::cout << *current_tile_it << "\n";
-    // std::cout << current_tile_it->downside().core << '\n';
-
-    // current_tile_it->rotate(1);
-    // std::cout << *current_tile_it << "\n";
-
-    // TileVisitor tv;
-    // tv.visit(&*current_tile_it);
 
     FixTileVisitor tile_visitor;
     tile_visitor.visit(&*current_tile_it);
