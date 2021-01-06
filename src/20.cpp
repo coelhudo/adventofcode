@@ -13,6 +13,11 @@
 #include <sstream>
 #include <functional>
 
+struct TileCore;
+struct Tile;
+std::ostream &operator<<(std::ostream &os, TileCore const& tile_core);
+std::ostream &operator<<(std::ostream &os, Tile const& tile_core);
+
 struct TileCore
 {
     explicit TileCore(int side_length, std::string const& core) : side_length{side_length},
@@ -175,19 +180,24 @@ struct Tile
     }
 
     bool matches(Tile & tile) {
-        if(tile.upside() == upside() || tile.downside() == upside() || tile.leftside() == upside() || tile.rightside() == upside())
+        auto match_any_side = [&](Tile const& tile, std::function<std::string const&()> side)
+        {
+            return tile.upside() == side() || tile.downside() == side() || tile.leftside() == side() || tile.rightside() == side();
+        };
+
+        if(match_any_side(tile, std::bind(&Tile::upside, *this)))
         {
             upside_neighbour(&tile);
         }
-        else if(tile.upside() == downside() || tile.downside() == downside() || tile.leftside() == downside() || tile.rightside() == downside())
+        else if(match_any_side(tile, std::bind(&Tile::downside, *this)))
         {
             downside_neighbour(&tile);
         }
-        else if(tile.upside() == leftside() || tile.downside() == leftside() || tile.leftside() == leftside() || tile.rightside() == leftside())
+        else if(match_any_side(tile, std::bind(&Tile::leftside, *this)))
         {
             leftside_neighbour(&tile);
         }
-        else if(tile.upside() == rightside() || tile.downside() == rightside() || tile.leftside() == rightside() || tile.rightside() == rightside())
+        else if(match_any_side(tile, std::bind(&Tile::rightside, *this)))
         {
             rightside_neighbour(&tile);
         }
@@ -201,13 +211,15 @@ struct Tile
 
     bool matches_flipped(Tile & tile) {
         tile.horizontal_flip();
-        if(matches(tile))
-            return true;
+        const bool hresult = matches(tile);
         tile.horizontal_flip(); //undo flip
+        if(hresult)
+            return true;
+
         tile.vertical_flip();
-        const bool result = matches(tile);
+        const bool vresult = matches(tile);
         tile.vertical_flip(); //undo flip
-        return result;
+        return vresult;
     }
 
     bool operator<(Tile const&other) const
@@ -303,11 +315,19 @@ struct Tile
 
     void horizontal_flip()
     {
+        auto leftside_n = leftside_neighbour();
+        auto rightside_n = rightside_neighbour();
+        leftside_neighbour(rightside_n);
+        rightside_neighbour(leftside_n);
         core.horizontal_flip();
     }
 
     void vertical_flip()
     {
+        auto upside_n = upside_neighbour();
+        auto downside_n = downside_neighbour();
+        upside_neighbour(downside_n);
+        downside_neighbour(upside_n);
         core.vertical_flip();
     }
 
@@ -339,11 +359,11 @@ std::ostream &operator<<(std::ostream &os, TileCore const& tile_core)
 std::ostream &operator<<(std::ostream &os, Tile const& tile)
 {
     os << "Id: " << tile.id << '\n';
-    os << "upside:\n" << tile.upside() << '\n';
-    os << "rightside:\n" << tile.rightside() << '\n';
-    os << "downside:\n" << tile.downside() << '\n';
-    os << "leftside:\n" << tile.leftside() << '\n';
-    os << "core: \n";
+    // os << "upside:\n" << tile.upside() << '\n';
+    // os << "rightside:\n" << tile.rightside() << '\n';
+    // os << "downside:\n" << tile.downside() << '\n';
+    // os << "leftside:\n" << tile.leftside() << '\n';
+    // os << "core: \n";
     os << tile.core << '\n';
 
 
@@ -397,39 +417,44 @@ struct FixTileVisitor: public TileVisitor
         if(tile->upside_neighbour() && !correct_upside_neighbour())
         {
             auto upside_neighbour = [&tile]{ return tile->upside_neighbour();};
-            fix(upside_neighbour, correct_upside_neighbour);
+            if(fix(upside_neighbour, correct_upside_neighbour))
+                already_fixed.insert(tile->upside_neighbour()->id);
         }
 
         if(tile->rightside_neighbour() && !correct_rightside_neighbour())
         {
             auto rightside_neighbour = [&tile]{ return tile->rightside_neighbour();};
-            fix(rightside_neighbour, correct_rightside_neighbour);
+            if(fix(rightside_neighbour, correct_rightside_neighbour))
+                already_fixed.insert(tile->rightside_neighbour()->id);
         }
 
         if(tile->downside_neighbour() && !correct_downside_neighbour())
         {
             auto downside_neighbour = [&tile]{ return tile->downside_neighbour();};
-            fix(downside_neighbour, correct_downside_neighbour);
+            if(fix(downside_neighbour, correct_downside_neighbour))
+                already_fixed.insert(tile->downside_neighbour()->id);
         }
 
         if(tile->leftside_neighbour() && !correct_leftside_neighbour())
         {
             auto leftside_neighbour = [&tile]{ return tile->leftside_neighbour();};
-            fix(leftside_neighbour, correct_leftside_neighbour);
+            if(fix(leftside_neighbour, correct_leftside_neighbour))
+                already_fixed.insert(tile->leftside_neighbour()->id);
         }
     }
 
     bool fix(std::function<Tile*()> neighbour, std::function<bool()> correct_position) const
     {
         Tile *current_neighbour = neighbour();
-        current_neighbour->horizontal_flip();
 
+        current_neighbour->horizontal_flip();
         if(correct_position())
             return true;
 
         current_neighbour->horizontal_flip(); //go back to the original state
 
         current_neighbour->vertical_flip();
+
         if(correct_position())
             return true;
 
@@ -459,6 +484,8 @@ struct FixTileVisitor: public TileVisitor
 
         return false;
     }
+
+    mutable std::set<int> already_fixed;
 };
 
 
@@ -523,38 +550,41 @@ int main(int argc, char *argv[])
         return tile.n_neighbours() == 2;
     });
 
-    FixTileVisitor tile_visitor;
-    tile_visitor.visit(&*current_tile_it);
-
     // TileVisitor tv;
     // tv.visit(&*current_tile_it);
+
+    FixTileVisitor tile_visitor;
+    tile_visitor.visit(&*current_tile_it);
 
     auto topleft_tile = *std::find_if(tiles.begin(), tiles.end(), [](Tile const& tile)
     {
         return tile.downside_neighbour() && tile.rightside_neighbour() && tile.upside_neighbour() == nullptr && tile.leftside_neighbour() == nullptr;
     });
 
-    // std::cout << topleft_tile << '\n';
-    std::ostringstream oss;
+    // std::ostringstream oss;
     for(auto vcurrent = &topleft_tile; vcurrent != nullptr; vcurrent = vcurrent->downside_neighbour())
     {
-        for(int i = 1; i < 9; ++i)
-        {
-            std::ostringstream line;
-            for(int j = 1; j < 9; ++j)
-                line << vcurrent->core(i, j);
+        std::cout << vcurrent->id << " ";
+
+        // for(int i = 1; i < 9; ++i)
+        // {
+        //     std::ostringstream line;
+        //     for(int j = 1; j < 9; ++j)
+        //         line << vcurrent->core(i, j);
             for(auto hcurrent = vcurrent->rightside_neighbour(); hcurrent != nullptr; hcurrent = hcurrent->rightside_neighbour())
             {
-                for(int j = 1; j < 9; ++j)
-                    line << hcurrent->core(i, j);
+                std::cout << hcurrent->id << " ";
+                // for(int j = 1; j < 9; ++j)
+                //     line << hcurrent->core(i, j);
             }
-            oss << line.str();
-        }
+            std::cout << '\n';
+            // oss << line.str();
+        // }
     }
 
-    TileCore t{24, oss.str()};
-    t.vertical_flip();
-    std::cout << t << '\n';
+    // TileCore t{24, oss.str()};
+    // t.vertical_flip();
+    // std::cout << t << '\n';
 
     return 0;
 }
