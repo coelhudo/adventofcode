@@ -360,13 +360,7 @@ std::ostream &operator<<(std::ostream &os, TileCore const& tile_core)
 std::ostream &operator<<(std::ostream &os, Tile const& tile)
 {
     os << "Id: " << tile.id << '\n';
-    // os << "upside:\n" << tile.upside() << '\n';
-    // os << "rightside:\n" << tile.rightside() << '\n';
-    // os << "downside:\n" << tile.downside() << '\n';
-    // os << "leftside:\n" << tile.leftside() << '\n';
-    // os << "core: \n";
     os << tile.core << '\n';
-
 
     return os;
 }
@@ -617,7 +611,7 @@ int main(int argc, char *argv[])
         int count{};
         for(int i = 0; i < inner_geo.size() && (i + upper_bound < inner_geo.size()); ++i)
         {
-            if(inner_geo.at(i) != '#')
+            if(inner_geo.at(i) != '#') //this doesn't take into account "half-seamonsters"
                 continue;
 
             bool found = true;
@@ -640,24 +634,74 @@ int main(int argc, char *argv[])
         return count;
     };
 
-    int count = search(geography);
-
-    for(int i = 0; i < 4 && count == 0; ++i)
+    auto update_geography_core = [](TileCore & geography)
     {
-        geography.rotate(1);
         std::ostringstream oss;
         for(int i = 0; i < geography.side_length; ++i)
             for(int j = 0; j < geography.side_length; ++j)
                 oss << geography(i, j);
 
         geography = TileCore(geography.side_length, oss.str());
+    };
+
+    int count = search(geography);
+
+    //rotate until is found (or not)
+    for(int i = 0; i < 5 && count == 0; ++i)
+    {
+        geography.rotate(1);
+        update_geography_core(geography);
         count = search(geography);
     }
 
+    //flip horizontally
+    if(count == 0)
+    {
+        geography.horizontal_flip();
+        update_geography_core(geography);
+        count = search(geography);
+    }
+
+    //flip vertically
+    if(count == 0)
+    {
+        geography.horizontal_flip();// back to the original state
+        geography.vertical_flip();
+        update_geography_core(geography);
+        count = search(geography);
+    }
+
+    //flip horizontally and rotate
+    if(count == 0)
+    {
+        geography.vertical_flip(); // back to the original state
+        geography.horizontal_flip();
+        for(int i = 0; i < 5 && count == 0; ++i)
+        {
+            geography.rotate(1);
+            update_geography_core(geography);
+            count = search(geography);
+        }
+    }
+
+    //flip vertically and rotate
+    if(count == 0)
+    {
+        geography.horizontal_flip();  // back to the original state
+        geography.vertical_flip();
+        for(int i = 0; i < 5 && count == 0; ++i)
+        {
+            geography.rotate(1);
+            update_geography_core(geography);
+            count = search(geography);
+        }
+    }
+
     std::cout << count << '\n';
+    std::string inner_core = geography.core;
+    int total_hashtags = std::count(inner_core.cbegin(), inner_core.cend(), '#');
+    std::cout << total_hashtags << "\n";
 
-    std::cout << geography << '\n';
-
-
+    // std::cout << geography << '\n';
     return 0;
 }
