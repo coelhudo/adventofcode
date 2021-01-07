@@ -12,6 +12,7 @@
 #include <set>
 #include <sstream>
 #include <functional>
+#include <cmath>
 
 struct TileCore;
 struct Tile;
@@ -561,30 +562,102 @@ int main(int argc, char *argv[])
         return tile.downside_neighbour() && tile.rightside_neighbour() && tile.upside_neighbour() == nullptr && tile.leftside_neighbour() == nullptr;
     });
 
-    // std::ostringstream oss;
+    //merge the images from topleft to downright
+    std::ostringstream oss;
     for(auto vcurrent = &topleft_tile; vcurrent != nullptr; vcurrent = vcurrent->downside_neighbour())
     {
-        std::cout << vcurrent->id << " ";
-
-        // for(int i = 1; i < 9; ++i)
-        // {
-        //     std::ostringstream line;
-        //     for(int j = 1; j < 9; ++j)
-        //         line << vcurrent->core(i, j);
+        for(int i = 1; i < 9; ++i)
+        {
+            std::ostringstream line;
+            for(int j = 1; j < 9; ++j)
+                line << vcurrent->core(i, j);
             for(auto hcurrent = vcurrent->rightside_neighbour(); hcurrent != nullptr; hcurrent = hcurrent->rightside_neighbour())
             {
-                std::cout << hcurrent->id << " ";
-                // for(int j = 1; j < 9; ++j)
-                //     line << hcurrent->core(i, j);
+                for(int j = 1; j < 9; ++j)
+                    line << hcurrent->core(i, j);
             }
-            std::cout << '\n';
-            // oss << line.str();
-        // }
+            oss << line.str();
+        }
     }
 
-    // TileCore t{24, oss.str()};
-    // t.vertical_flip();
-    // std::cout << t << '\n';
+    auto merged_cores = oss.str();
+    TileCore geography{static_cast<int>(std::sqrt(merged_cores.size())), merged_cores};
+
+    std::string sea_monster_template{"                  # "
+                                     "#    ##    ##    ###"
+                                     " #  #  #  #  #  #   "};
+    const int sea_monster_height = 3;
+    const int sea_monster_length = sea_monster_template.size() / sea_monster_height;
+
+    const int search_offset = geography.side_length - sea_monster_length;
+
+    auto c = sea_monster_template.begin();
+    auto pos = std::find(c, sea_monster_template.end(), '#');
+    std::vector<int> sea_monster_pos;
+    while(pos != sea_monster_template.end())
+    {
+        sea_monster_pos.push_back(std::distance(sea_monster_template.begin(), pos));
+        c = pos + 1;
+        pos = std::find(c, sea_monster_template.end(), '#');
+    }
+
+    int base = *sea_monster_pos.begin();
+    for(auto &pos : sea_monster_pos)
+    {
+        int i = pos / sea_monster_length;
+        pos = (pos - base) + i * search_offset;
+    }
+
+    auto search = [&sea_monster_pos](TileCore &geography)
+    {
+        std::string &inner_geo = geography.core;
+
+        auto upper_bound = *sea_monster_pos.rbegin();
+
+        int count{};
+        for(int i = 0; i < inner_geo.size() && (i + upper_bound < inner_geo.size()); ++i)
+        {
+            if(inner_geo.at(i) != '#')
+                continue;
+
+            bool found = true;
+            for(auto pos : sea_monster_pos)
+            {
+                found &= inner_geo.at(i + pos) == '#';
+            }
+
+            if(found)
+            {
+                ++count;
+                for(auto pos : sea_monster_pos)
+                {
+                    inner_geo.at(i + pos) = 'O';
+                }
+            }
+
+        }
+
+        return count;
+    };
+
+    int count = search(geography);
+
+    for(int i = 0; i < 4 && count == 0; ++i)
+    {
+        geography.rotate(1);
+        std::ostringstream oss;
+        for(int i = 0; i < geography.side_length; ++i)
+            for(int j = 0; j < geography.side_length; ++j)
+                oss << geography(i, j);
+
+        geography = TileCore(geography.side_length, oss.str());
+        count = search(geography);
+    }
+
+    std::cout << count << '\n';
+
+    std::cout << geography << '\n';
+
 
     return 0;
 }
