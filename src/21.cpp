@@ -4,6 +4,7 @@
 #include <cassert>
 #include <regex>
 #include <iterator>
+#include <sstream>
 #include <unordered_map>
 #include <map>
 #include <set>
@@ -23,6 +24,7 @@ int main(int argc, char *argv[])
     std::regex pattern{R"(([\w+]+))"};
 
     std::unordered_map<std::string, int> ingredients_dictionary; //just to make it easy to visualize
+    std::unordered_map<int, std::string> ingredients_dictionary_index; //just to make it easy to visualize
     int count{};
 
     std::vector<Food> foods;
@@ -47,8 +49,10 @@ int main(int argc, char *argv[])
             if(!allergen)
             {
                 auto it = ingredients_dictionary.find(match[0]);
-                if(it == ingredients_dictionary.end())
+                if(it == ingredients_dictionary.end()) {
                     ingredients_dictionary[match[0]] = ++count;
+                    ingredients_dictionary_index[count] = match[0];
+                }
                 ingredients_code.insert(ingredients_dictionary[match[0]]);
             }
             else
@@ -63,6 +67,7 @@ int main(int argc, char *argv[])
     //create a map containing the allergen as key and a set of all
     //codes where the allergen is present
     std::map<std::string, std::set<int>> single_allergen;
+    //O(m * n * j) where m is the number of foods, n is the number of allergens, and j is the number of ingredients
     for(auto current_allergen : all_allergens)
     {
         std::set<int> current_allergen_ingredients;
@@ -91,6 +96,7 @@ int main(int argc, char *argv[])
     //found which ingredients has only a single occurrence, remove
     //them from the other allergen set of ingredients. keep doing that
     //until all allergens have only one ingredient associated with it.
+    //O(n^2) where n is the number of allergens
     while(!std::all_of(single_allergen.begin(),
                        single_allergen.end(),
                        [](auto entry){ return entry.second.size() == 1;}))
@@ -126,6 +132,7 @@ int main(int argc, char *argv[])
     //count number of times when this element appears
     int allergen_ingredients_counter{};
     int total_ingredients{};
+    //O(m * n * j) where m is the number of foods, n is the number of allergens, and j is the number of ingredients
     for(auto [ingredients, _] : foods)
     {
         for(auto [allergen, ingredient_set] : single_allergen)
@@ -136,9 +143,20 @@ int main(int argc, char *argv[])
         total_ingredients += ingredients.size();
     }
 
-    std::cout << allergen_ingredients_counter << '\n';
-    std::cout << total_ingredients << '\n';
+    // std::cout << allergen_ingredients_counter << '\n';
+    // std::cout << total_ingredients << '\n';
     std::cout << "Part 1: " << total_ingredients - allergen_ingredients_counter << '\n';
+
+    //Part 2
+    //O(m) where m is the number of allergens
+    std::ostringstream oss;
+    auto first = single_allergen.begin();
+    oss << ingredients_dictionary_index[*first->second.begin()];
+    for (auto it = std::next(first); it != single_allergen.end(); ++it) {
+        auto ingredient_code = *it->second.begin();
+        oss << ',' << ingredients_dictionary_index[ingredient_code];
+    }
+    std::cout << "Part 2: " << oss.str() << '\n';
 
     return 0;
 }
