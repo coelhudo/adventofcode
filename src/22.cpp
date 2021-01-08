@@ -2,9 +2,11 @@
 #include <iostream>
 #include <fstream>
 #include <cassert>
+#include <iterator>
 #include <string>
 #include <list>
 #include <set>
+#include <algorithm>
 
 namespace std
 {
@@ -22,28 +24,17 @@ namespace std
     };
 }
 
-bool recursive_combat(std::list<int> player_one_deck, std::list<int> player_two_deck, int game)
+bool recursive_combat(std::list<int> &player_one_deck, std::list<int> &player_two_deck, int game)
 {
-    std::cout << "Playing game " << game << '\n';
     std::set<std::size_t> snapshot;
     int round = 1;
     while(!player_one_deck.empty() && !player_two_deck.empty())
     {
-        std::cout << "Round " << round << '\n';
         auto deck_one_snapshot = std::hash<std::list<int>>()(player_one_deck);
         auto deck_two_snapshot = std::hash<std::list<int>>()(player_two_deck);
 
         if(snapshot.find(deck_one_snapshot) != snapshot.end() || snapshot.find(deck_two_snapshot) != snapshot.end())
-        {
-            for(auto card : player_one_deck)
-                std::cout << card << ' ';
-            std::cout << "\n";
-
-            for(auto card : player_two_deck)
-                std::cout << card << ' ';
-            std::cout << "\n";
             return true; //player one wins
-        }
 
         snapshot.insert(deck_one_snapshot);
         snapshot.insert(deck_two_snapshot);
@@ -53,43 +44,32 @@ bool recursive_combat(std::list<int> player_one_deck, std::list<int> player_two_
         auto topcard_player_two = player_two_deck.front();
         player_two_deck.pop_front();
 
+        bool player_one_won = false;
         if(topcard_player_one > player_one_deck.size() || topcard_player_two > player_two_deck.size())
+            player_one_won = topcard_player_one > topcard_player_two;
+        else
         {
-            if(topcard_player_one > topcard_player_two)
-            {
-                player_one_deck.push_back(topcard_player_one);
-                player_one_deck.push_back(topcard_player_two);
-            }
-            else
-            {
-                player_two_deck.push_back(topcard_player_two);
-                player_two_deck.push_back(topcard_player_one);
-            }
+            std::list<int> copy_player_one_deck;
+            std::copy_n(player_one_deck.begin(), topcard_player_one, std::inserter(copy_player_one_deck, copy_player_one_deck.begin()));
+
+            std::list<int> copy_player_two_deck;
+            std::copy_n(player_two_deck.begin(), topcard_player_two, std::inserter(copy_player_two_deck, copy_player_two_deck.begin()));
+
+            player_one_won = recursive_combat(copy_player_one_deck, copy_player_two_deck, game+1);
+        }
+
+        if(player_one_won)
+        {
+            player_one_deck.push_back(topcard_player_one);
+            player_one_deck.push_back(topcard_player_two);
         }
         else
         {
-            if(recursive_combat(player_one_deck, player_two_deck, game+1))
-            {
-                player_one_deck.push_back(topcard_player_one);
-                player_one_deck.push_back(topcard_player_two);
-            }
-            else
-            {
-                player_two_deck.push_back(topcard_player_two);
-                player_two_deck.push_back(topcard_player_one);
-            }
+            player_two_deck.push_back(topcard_player_two);
+            player_two_deck.push_back(topcard_player_one);
         }
         ++round;
     }
-
-    for(auto card : player_one_deck)
-        std::cout << card << ' ';
-    std::cout << "\n";
-
-    for(auto card : player_two_deck)
-        std::cout << card << ' ';
-    std::cout << "\n";
-
 
     return !player_one_deck.empty();
 }
@@ -149,18 +129,31 @@ int main(int argc, char *argv[])
 
     auto winner_deck = player_one_deck.empty() ? player_two_deck : player_one_deck;
 
-    int multiplier = winner_deck.size();
-    int accumulator{};
-    for(auto card : winner_deck)
-    {
-        accumulator += card * multiplier--;
-    }
+    auto compute_score = [](std::list<int> const& winner_deck){
+        int multiplier = winner_deck.size();
+        int accumulator{};
+        for(auto card : winner_deck)
+        {
+            accumulator += card * multiplier--;
+        }
+        return accumulator;
+    };
 
-    std::cout << "Part 1: " << accumulator << '\n';
+
+    std::cout << "Part 1: " << compute_score(winner_deck) << '\n';
 
     //Part 2: recursive game
-    auto winner = recursive_combat(player_one_original_deck, player_two_original_deck, 1);
-    std::cout << winner << '\n';
+    player_one_deck = player_one_original_deck;
+    player_two_deck = player_two_original_deck;
+
+    auto winner = recursive_combat(player_one_deck, player_two_deck, 1);
+
+    winner_deck = player_one_deck.empty() ? player_two_deck : player_one_deck;
+    for(auto card: winner_deck)
+        std::cout << card << " ";
+    std::cout << "\n";
+
+    std::cout << "Part 2: " << compute_score(winner_deck) << '\n';
 
     return 0;
 }
