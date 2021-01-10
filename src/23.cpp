@@ -1,3 +1,4 @@
+#include <bits/c++config.h>
 #include <iostream>
 #include <fstream>
 #include <cassert>
@@ -21,7 +22,7 @@ void print_container(Container const& container, int current_cup)
     std::cout << "\n";
 }
 
-void play_combat(int current_cup, int times, std::map<int, int> &adjacent_cups)
+void play_combat(int current_cup, int times, std::map<int, int> &adjacent_cups, int max_cup_value)
 {
     for (int i = 0; i < times; ++i)
     {
@@ -33,9 +34,8 @@ void play_combat(int current_cup, int times, std::map<int, int> &adjacent_cups)
         {
             --destination_cup;
             if(destination_cup < 1)
-                destination_cup = 9;
+                destination_cup = max_cup_value;
         }
-        // std::cout << "destination cup " << destination_cup << '\n';
 
         int adjacent_destination_cup = adjacent_cups[destination_cup];
         int adjacent_cup_three = adjacent_cups[cup_three];
@@ -46,11 +46,8 @@ void play_combat(int current_cup, int times, std::map<int, int> &adjacent_cups)
     }
 }
 
-int main(int argc, char *argv[])
+std::map<int, int> load_adjacent_cups(std::vector<int> const& puzzle_input_raw)
 {
-    //Part 1
-    std::vector<int> puzzle_input_raw{8,7,2,4,9,5,1,3,6};
-    // std::vector<int> puzzle_input_raw{3, 8, 9, 1, 2, 5, 4, 6, 7};
     std::map<int, int> adjacent_cups;
     for(int i = 0; i < puzzle_input_raw.size() - 1; ++i)
     {
@@ -58,30 +55,46 @@ int main(int argc, char *argv[])
     }
 
     adjacent_cups[puzzle_input_raw.at(puzzle_input_raw.size() - 1)] = puzzle_input_raw.at(0);
-    auto current_cup = puzzle_input_raw.at(0);
+    return adjacent_cups;
+}
 
-    play_combat(current_cup, 100, adjacent_cups);
-
-    int next = adjacent_cups[1];
-    while(next != 1)
+int main(int argc, char *argv[])
+{
     {
-        std::cout << next;
-        next = adjacent_cups[next];
-    }
-    std::cout << '\n';
+        //Part 1
+        std::vector<int> puzzle_input_raw{8,7,2,4,9,5,1,3,6};
+        auto adjacent_cups = load_adjacent_cups(puzzle_input_raw);
 
-    //Part 2
-    int count = puzzle_input_raw.size() + 1;
-    std::generate_n(std::inserter(puzzle_input_raw, puzzle_input_raw.begin()), 1000000 - puzzle_input_raw.size(), [&count]{ return count++;});
-    adjacent_cups.clear();
-    for(int i = 0; i < puzzle_input_raw.size() - 1; ++i)
+        auto current_cup = puzzle_input_raw.at(0);
+        play_combat(current_cup, 100, adjacent_cups, 9);
+
+        std::cout << "Part 1: ";
+        int next = adjacent_cups[1];
+        while(next != 1)
+        {
+            std::cout << next;
+            next = adjacent_cups[next];
+        }
+        std::cout << '\n';
+    }
+
     {
-        adjacent_cups[puzzle_input_raw.at(i)] = puzzle_input_raw.at(i + 1);
+        //Part 2
+        std::vector<int> puzzle_input_raw{8,7,2,4,9,5,1,3,6};
+        int count = puzzle_input_raw.size() + 1;
+        std::generate_n(std::back_inserter(puzzle_input_raw), 1000000 - puzzle_input_raw.size(), [&count]{ return count++;});
+        auto adjacent_cups = load_adjacent_cups(puzzle_input_raw);
+
+        auto current_cup = puzzle_input_raw.at(0);
+        play_combat(current_cup, 10000000, adjacent_cups, 1000000);
+
+        std::size_t first_cup = adjacent_cups[1];
+        std::size_t second_cup = adjacent_cups[first_cup];
+
+        // std::cout << first_cup << ' ' << second_cup << '\n';
+        std::cout << "Part 2: " << first_cup * second_cup << '\n';
     }
 
-    adjacent_cups[puzzle_input_raw.at(puzzle_input_raw.size() - 1)] = puzzle_input_raw.at(0);
-
-    // play_combat(current_cup, 10000000, adjacent_cups);
 
     return 0;
 }
