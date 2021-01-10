@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <list>
 #include <chrono>
-#include <map>
+#include <unordered_map>
 #include <execution>
 
 template<typename Container>
@@ -22,7 +22,7 @@ void print_container(Container const& container, int current_cup)
     std::cout << "\n";
 }
 
-void play_combat(int current_cup, int times, std::map<int, int> &adjacent_cups, int max_cup_value)
+void play_combat(int current_cup, int times, std::unordered_map<int, int> &adjacent_cups, int max_cup_value)
 {
     for (int i = 0; i < times; ++i)
     {
@@ -46,9 +46,9 @@ void play_combat(int current_cup, int times, std::map<int, int> &adjacent_cups, 
     }
 }
 
-std::map<int, int> load_adjacent_cups(std::vector<int> const& puzzle_input_raw)
+std::unordered_map<int, int> load_adjacent_cups(std::vector<int> const& puzzle_input_raw)
 {
-    std::map<int, int> adjacent_cups;
+    std::unordered_map<int, int> adjacent_cups;
     for(int i = 0; i < puzzle_input_raw.size() - 1; ++i)
     {
         adjacent_cups[puzzle_input_raw.at(i)] = puzzle_input_raw.at(i + 1);
