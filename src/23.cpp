@@ -2,10 +2,16 @@
 #include <fstream>
 #include <cassert>
 #include <iterator>
+#include <ratio>
 #include <vector>
 #include <algorithm>
+#include <list>
+#include <chrono>
+#include <map>
+#include <execution>
 
-void print_container(std::vector<int> const& container, int current_cup)
+template<typename Container>
+void print_container(Container const& container, int current_cup)
 {
     for(auto i : container)
         if(current_cup == i)
@@ -15,83 +21,67 @@ void print_container(std::vector<int> const& container, int current_cup)
     std::cout << "\n";
 }
 
+void play_combat(int current_cup, int times, std::map<int, int> &adjacent_cups)
+{
+    for (int i = 0; i < times; ++i)
+    {
+        int cup_one = adjacent_cups[current_cup];
+        int cup_two = adjacent_cups[cup_one];
+        int cup_three = adjacent_cups[cup_two];
+        int destination_cup = current_cup - 1;
+        while(destination_cup == cup_one || destination_cup == cup_two || destination_cup == cup_three || destination_cup == 0)
+        {
+            --destination_cup;
+            if(destination_cup < 1)
+                destination_cup = 9;
+        }
+        // std::cout << "destination cup " << destination_cup << '\n';
+
+        int adjacent_destination_cup = adjacent_cups[destination_cup];
+        int adjacent_cup_three = adjacent_cups[cup_three];
+        adjacent_cups[current_cup] = adjacent_cup_three;
+        adjacent_cups[cup_three] = adjacent_destination_cup;
+        adjacent_cups[destination_cup] = cup_one;
+        current_cup = adjacent_cup_three;
+    }
+}
+
 int main(int argc, char *argv[])
 {
-    std::vector<int> puzzle_input{8,7,2,4,9,5,1,3,6};
+    //Part 1
+    std::vector<int> puzzle_input_raw{8,7,2,4,9,5,1,3,6};
+    // std::vector<int> puzzle_input_raw{3, 8, 9, 1, 2, 5, 4, 6, 7};
+    std::map<int, int> adjacent_cups;
+    for(int i = 0; i < puzzle_input_raw.size() - 1; ++i)
     {
-        //Part 1
-        auto current_cup = puzzle_input.begin();
-        for (int i = 0; i < 100; ++i)
-        {
-            int destination_cup = *current_cup - 1;
-
-            auto next_cup_it = (current_cup + 1 == puzzle_input.end()) ? puzzle_input.begin() : current_cup + 1;
-            //erase the three elements and save them into variables
-            int cup_one = *next_cup_it;
-            next_cup_it = puzzle_input.erase(next_cup_it);
-            if(next_cup_it == puzzle_input.end())
-                next_cup_it = puzzle_input.begin();
-
-            int cup_two = *next_cup_it;
-            next_cup_it = puzzle_input.erase(next_cup_it);
-            if(next_cup_it == puzzle_input.end())
-                next_cup_it = puzzle_input.begin();
-
-            int cup_three = *next_cup_it;
-            next_cup_it = puzzle_input.erase(next_cup_it);
-
-            //search for the destination cup
-            while(destination_cup == cup_one || destination_cup == cup_two || destination_cup == cup_three || destination_cup == 0)
-            {
-                --destination_cup;
-                if(destination_cup < 1)
-                    destination_cup = 9;
-            }
-
-            //if the current_cup is at the end of the list, we make
-            //the next one the first of the list
-            if(*current_cup == *puzzle_input.rbegin())
-            {
-                current_cup = puzzle_input.begin();
-            }
-            else
-            {
-                ++current_cup;
-            }
-
-            //saving since the iterator will be invalidated
-            int next_cup = *current_cup;
-
-            auto destination_cup_it = std::find(puzzle_input.begin(), puzzle_input.end(), destination_cup);
-            if(*destination_cup_it == *puzzle_input.rbegin())
-            {
-                puzzle_input.push_back(cup_one);
-                puzzle_input.push_back(cup_two);
-                puzzle_input.push_back(cup_three);
-            }
-            else
-            {
-                puzzle_input.insert(destination_cup_it + 1, cup_one);
-                puzzle_input.insert(destination_cup_it + 2, cup_two);
-                puzzle_input.insert(destination_cup_it + 3, cup_three);
-            }
-
-            current_cup = std::find(puzzle_input.begin(), puzzle_input.end(), next_cup);
-        }
-
-        //Output using the number 1 as the reference number
-        auto one_pos = std::find(puzzle_input.begin(), puzzle_input.end(), 1);
-        auto current = std::next(one_pos);
-        //everything that is after the number 1
-        for(;current != puzzle_input.end(); ++current)
-            std::cout << *current;
-
-        //everything that is before the number 1
-        for(auto it = puzzle_input.begin(); it != one_pos; ++it)
-        {
-            std::cout << *it;
-        }
-        std::cout << '\n';
+        adjacent_cups[puzzle_input_raw.at(i)] = puzzle_input_raw.at(i + 1);
     }
+
+    adjacent_cups[puzzle_input_raw.at(puzzle_input_raw.size() - 1)] = puzzle_input_raw.at(0);
+    auto current_cup = puzzle_input_raw.at(0);
+
+    play_combat(current_cup, 100, adjacent_cups);
+
+    int next = adjacent_cups[1];
+    while(next != 1)
+    {
+        std::cout << next;
+        next = adjacent_cups[next];
+    }
+    std::cout << '\n';
+
+    //Part 2
+    int count = puzzle_input_raw.size() + 1;
+    std::generate_n(std::inserter(puzzle_input_raw, puzzle_input_raw.begin()), 1000000 - puzzle_input_raw.size(), [&count]{ return count++;});
+    adjacent_cups.clear();
+    for(int i = 0; i < puzzle_input_raw.size() - 1; ++i)
+    {
+        adjacent_cups[puzzle_input_raw.at(i)] = puzzle_input_raw.at(i + 1);
+    }
+
+    adjacent_cups[puzzle_input_raw.at(puzzle_input_raw.size() - 1)] = puzzle_input_raw.at(0);
+
+    // play_combat(current_cup, 10000000, adjacent_cups);
+
     return 0;
 }
