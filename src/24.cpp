@@ -183,6 +183,7 @@ int main(int argc, char *argv[])
                 tiles_to_search.insert(HexTile(tile).move_north_west());
             }
 
+            //std::cout << tiles_to_search.size() << '\n';
             for(auto tile : tiles_to_search)
             {
                 auto adjacent_black_tiles = number_of_adjacent_turned_tiles(tile, turned_tiles);
@@ -198,9 +199,11 @@ int main(int argc, char *argv[])
                         new_turned_tiles.insert(tile);
                 }
             }
-            std::cout << "Day " << i + 1 << ": " << new_turned_tiles.size() << '\n';
+            //std::cout << "Day " << i + 1 << ": " << new_turned_tiles.size() << '\n';
             turned_tiles = new_turned_tiles;
         }
+
+        std::cout << "Part 2: " << turned_tiles.size() << '\n';
     }
 
     return 0;
