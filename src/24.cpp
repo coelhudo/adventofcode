@@ -183,10 +183,12 @@ int main(int argc, char *argv[])
                 tiles_to_search.insert(HexTile(tile).move_north_west());
             }
 
-            //std::cout << tiles_to_search.size() << '\n';
             for(auto tile : tiles_to_search)
             {
                 auto adjacent_black_tiles = number_of_adjacent_turned_tiles(tile, turned_tiles);
+                //no need to keep searching if it doesn't match any criteria
+                if(!(adjacent_black_tiles != 0 && adjacent_black_tiles <= 2))
+                    continue;
                 auto pos = turned_tiles.find(tile);
                 if(pos != turned_tiles.end())
                 {
@@ -199,7 +201,7 @@ int main(int argc, char *argv[])
                         new_turned_tiles.insert(tile);
                 }
             }
-            //std::cout << "Day " << i + 1 << ": " << new_turned_tiles.size() << '\n';
+            // std::cout << "Day " << i + 1 << ": " << new_turned_tiles.size() << '\n';
             turned_tiles = new_turned_tiles;
         }
 
