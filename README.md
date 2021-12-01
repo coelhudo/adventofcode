@@ -1,4 +1,4 @@
 # adventofcode
-https://adventofcode.com/2020
+https://adventofcode.com/
 
-* Written in C++ 17
+* Written in C++ 17 / C++ 20
