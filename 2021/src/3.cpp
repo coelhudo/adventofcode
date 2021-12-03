@@ -28,7 +28,10 @@ int main(int argc, char** argv) {
     int gamma{0};
     int epsilon{0};
     for (auto c: counter) {
-        gamma <<= 1;);
+        gamma <<= 1;
+        epsilon <<= 1;
+
+        (c > half) ? (gamma |= 1) : (epsilon |= 1);
     }
 
     std::cout << "Part 1 " << gamma * epsilon << '\n';
