@@ -21,11 +21,8 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    std::vector<int> inputs;
-
     std::ifstream ifs{argv[1]};
-    std::copy(std::istream_iterator<int>{ifs}, std::istream_iterator<int>{},
-              std::inserter(inputs, std::begin(inputs)));
+    std::vector<int> inputs{std::istream_iterator<int>{ifs}, std::istream_iterator<int>{}};
 
     // Part 1
     {
