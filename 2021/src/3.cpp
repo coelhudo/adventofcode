@@ -1,7 +1,9 @@
 // Most of the files will follow this pattern
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <vector>
+#include <set>
 #include <algorithm>
 #include <sstream>
 #include <bitset>
@@ -15,7 +17,10 @@ int main(int argc, char** argv) {
     std::ifstream ifs{argv[1]};
     std::vector<std::string> inputs{std::istream_iterator<std::string>{ifs}, std::istream_iterator<std::string>{}};
 
-    std::vector<int> counter(static_cast<int>(inputs.at(0).size()));
+    const int input_size = static_cast<int>((*inputs.cbegin()).size());
+
+    // O(n)
+    std::vector<int> counter(input_size);
     for(auto input : inputs) {
         for (std::size_t i = 0; i < counter.size(); ++i) {
             if (input[i] == '1')
@@ -25,6 +30,7 @@ int main(int argc, char** argv) {
 
     const int half = inputs.size() >> 1;
 
+    //O(1)
     int gamma{0};
     int epsilon{0};
     for (auto c: counter) {
@@ -35,6 +41,26 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "Part 1 " << gamma * epsilon << '\n';
+
+    //O(N log N)
+    std::set<std::string> sorted_inputs{inputs.cbegin(), inputs.cend()};
+
+    auto start = sorted_inputs.cbegin();
+    auto end = sorted_inputs.cend();
+    for (int i = 0; i < input_size; ++i) {
+        auto it = std::find_if(start, end, [i](std::string_view entry) {
+            return entry[i] == '1';
+        });
+        const int zeros = std::distance(sorted_inputs.cbegin(), it);
+        const int ones = std::distance(it, sorted_inputs.cend());
+        if (zeros > ones) {
+            end = it;
+        } else {
+            start = it;
+        }
+    }
+
+
 
     return 0;
 }
