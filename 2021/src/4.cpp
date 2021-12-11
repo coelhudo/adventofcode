@@ -1,9 +1,20 @@
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <stdexcept>
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <map>
+#include <cmath>
+
+template<typename Items>
+void print(const Items &items) {
+    for(auto item : items) {
+        std::cout << item << ' ';
+    }
+    std::cout << '\n';
+}
 
 auto split(std::string line, char sep) {
     if (sep != ' ') {
@@ -27,18 +38,17 @@ auto split(std::string line, char sep) {
     return draws;
 }
 
-template<typename Items>
-void print(const Items &items) {
-    for(auto item : items) {
-        std::cout << item << ' ';
-    }
-    std::cout << '\n';
-}
-
 class BingoBoard {
 public:
-    explicit(true) BingoBoard(std::vector<std::string> items) : items(items), size(items.at(0).size()) {
-
+    explicit(true) BingoBoard(std::vector<std::string> items) : items(items), size(std::sqrt(items.size())) {
+        // std::cout << "BingoBoard\n";
+        for(int i = 0; i < size; ++i) {
+            for(int j = 0; j < size; ++j) {
+                auto item = this->operator()(i, j);
+                inverted_index[std::string(item)] = std::make_pair(i, j);
+                // std::cout << item << " (" << i << ", " << j << ") " << inverted_index.contains(item) << '\n';
+            }
+        }
     }
 
     std::string_view operator()(int row, int column) const {
@@ -50,8 +60,14 @@ public:
         return items.at(index);
     }
 
+    bool has_item(const std::string &item) const {
+        return inverted_index.contains(item);
+    }
+
     const std::vector<std::string> items;
     const int size;
+private:
+    std::map<std::string, std::tuple<int,int>> inverted_index;
 };
 
 std::ostream& operator<<(std::ostream& os, const BingoBoard& board) {
@@ -79,6 +95,7 @@ int main(int argc, char** argv) {
 
     std::vector<BingoBoard> bingo_boards;
     std::stringstream ss;
+    std::getline(ifs, line); //skip next line since it is empty
     while(std::getline(ifs, line)) {
         if (line.empty()) {
             bingo_boards.emplace_back(split(ss.str(), ' '));
