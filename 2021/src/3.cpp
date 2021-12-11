@@ -1,4 +1,3 @@
-// Most of the files will follow this pattern
 #include <fstream>
 #include <iostream>
 #include <iterator>
