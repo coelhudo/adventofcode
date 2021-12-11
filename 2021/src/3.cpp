@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <sstream>
 #include <bitset>
+#include <functional>
 
 int main(int argc, char** argv) {
     if (argc == 1) {
@@ -45,22 +46,32 @@ int main(int argc, char** argv) {
     //O(N log N)
     std::set<std::string> sorted_inputs{inputs.cbegin(), inputs.cend()};
 
-    auto start = sorted_inputs.cbegin();
-    auto end = sorted_inputs.cend();
-    for (int i = 0; i < input_size; ++i) {
-        auto it = std::find_if(start, end, [i](std::string_view entry) {
-            return entry[i] == '1';
-        });
-        const int zeros = std::distance(sorted_inputs.cbegin(), it);
-        const int ones = std::distance(it, sorted_inputs.cend());
-        if (zeros > ones) {
-            end = it;
-        } else {
-            start = it;
+    //O(log N)
+    auto find_entry = [&sorted_inputs, &input_size](auto cmp) {
+        auto start = sorted_inputs.cbegin();
+        auto end = sorted_inputs.cend();
+
+        for (int i = 0; i < input_size; ++i) {
+            auto it = std::find_if(start, end, [i](std::string_view entry) {
+                return entry[i] == '1';
+            });
+            const int zeros = std::distance(start, it);
+            const int ones = std::distance(it, end);
+            if (zeros == 0 || ones == 0)
+                break;
+
+            if (cmp(zeros, ones)) {
+                end = it;
+            } else {
+                start = it;
+            }
         }
-    }
+        return std::bitset<32>(*start).to_ullong();
+    };
 
-
+    auto oxi_gen = find_entry(std::greater<int>());
+    auto co2_scrubber = find_entry(std::less_equal<int>());
+    std::cout << "Part 2: " << oxi_gen * co2_scrubber << '\n';
 
     return 0;
 }
