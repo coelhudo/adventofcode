@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 #include <vector>
 #include <algorithm>
 #include <sstream>
@@ -34,6 +35,33 @@ void print(const Items &items) {
     std::cout << '\n';
 }
 
+class BingoBoard {
+public:
+    explicit(true) BingoBoard(std::vector<std::string> items) : items(items), size(items.at(0).size()) {
+
+    }
+
+    std::string_view operator()(int row, int column) const {
+        int index = row * size + column;
+        if (index > size * size || index < 0) {
+            throw std::range_error("Invalid row or column");
+        }
+
+        return items.at(index);
+    }
+
+    const std::vector<std::string> items;
+    const int size;
+};
+
+std::ostream& operator<<(std::ostream& os, const BingoBoard& board) {
+    for(auto item : board.items) {
+        os << item << ' ';
+    }
+    os << '\n';
+    return os;
+}
+
 int main(int argc, char** argv) {
     if (argc == 1) {
         std::cout << "missing input file\n";
@@ -49,20 +77,20 @@ int main(int argc, char** argv) {
     std::cout << line << '\n';
     print(draws);
 
+    std::vector<BingoBoard> bingo_boards;
     std::stringstream ss;
     while(std::getline(ifs, line)) {
         if (line.empty()) {
-            auto bingo_board = split(ss.str(), ' ');
-            print(bingo_board);
-            std::cout << "next!\n";
+            bingo_boards.emplace_back(split(ss.str(), ' '));
             ss.str("");
             continue;
         }
         ss << line << ' ';
     }
 
-    auto bingo_board = split(ss.str(), ' ');
-    print(bingo_board);
+    bingo_boards.emplace_back(split(ss.str(), ' '));
+
+    print(bingo_boards);
 
     return 0;
 }
