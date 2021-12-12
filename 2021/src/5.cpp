@@ -6,6 +6,7 @@
 #include <sstream>
 #include <regex>
 #include <tuple>
+#include <set>
 
 auto print_coordinates = [](const auto &span) {
     for (const auto &p : span) {
@@ -25,6 +26,9 @@ int main(int argc, char** argv) {
     std::multimap<int, coordinate> horizontal;
     std::multimap<int, coordinate> vertical;
     std::multimap<int, coordinate> diagonal;
+    std::set<int> h_entry;
+    std::set<int> v_entry;
+    std::set<int> d_entry;
 
     auto to_int = [](auto regex_it) {
         return std::atoi(regex_it->str().c_str());
@@ -36,34 +40,42 @@ int main(int argc, char** argv) {
         auto second = std::next(first), third = std::next(second), fourth = std::next(third);
         auto x1 = to_int(first), y1 = to_int(second), x2 = to_int(third), y2 = to_int(fourth);
         if (x1 == x2) {
+            v_entry.insert(x1);
             if(y1 <= y2)
                 vertical.emplace(std::make_pair(x1, std::make_tuple(y1, y2)));
             else
                 vertical.emplace(std::make_pair(x1, std::make_tuple(y2, y1)));
         } else if (y1 == y2) {
+            h_entry.insert(x1);
             if(x1 <= x2)
                 horizontal.emplace(std::make_pair(y1, std::make_tuple(x1, x2)));
             else
                 horizontal.emplace(std::make_pair(y1, std::make_tuple(x2, x1)));
         } else {
             // TODO
+            d_entry.insert(x1);
             diagonal.emplace(std::make_pair(x1, std::make_tuple(y1, x2)));
         }
     }
 
-    std::cout << "horizontal\n";
-    print_coordinates(horizontal);
-    std::cout << "vertical\n";
-    print_coordinates(vertical);
-    std::cout << "diagonal\n";
-    print_coordinates(diagonal);
-    // for(auto vent : vents) {
-    //     auto first = std::get<0>(vent);
-    //     auto second = std::get<1>(vent);
+    // std::cout << "horizontal\n";
+    // print_coordinates(horizontal);
+    // std::cout << "vertical\n";
+    // print_coordinates(vertical);
+    // std::cout << "diagonal\n";
+    // print_coordinates(diagonal);
 
-    //     std::cout << "(" << std::get<0>(first) << ", " << std::get<1>(first) << ") : (";
-    //     std::cout << std::get<0>(second) << ", " << std::get<1>(second) << ")\n";
-    // }
+    //TODO: fix this
+    for(auto line : h_entry) {
+        auto result = horizontal.equal_range(line);
+        auto n_elements = std::distance(result.first, result.second);
+        if (n_elements > 1) {
+            while(result.first != result.second) {
+                std::cout << result.first->first << ": " << std::get<0>(result.first->second) << ' ' << std::get<1>(result.first->second) << '\n';
+                ++result.first;
+            }
+        }
+    }
 
     return 0;
 }
