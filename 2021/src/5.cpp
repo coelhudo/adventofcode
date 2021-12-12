@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
             else
                 vertical.emplace(std::make_pair(x1, std::make_tuple(y2, y1)));
         } else if (y1 == y2) {
-            h_entry.insert(x1);
+            h_entry.insert(y1);
             if(x1 <= x2)
                 horizontal.emplace(std::make_pair(y1, std::make_tuple(x1, x2)));
             else
@@ -70,6 +70,13 @@ int main(int argc, char** argv) {
         auto result = horizontal.equal_range(line);
         auto n_elements = std::distance(result.first, result.second);
         if (n_elements > 1) {
+            auto first = result.first->second;
+            auto second = std::next(result.first)->second;
+            auto x1 = std::get<0>(first);
+            auto x2 = std::get<1>(first);
+            auto x3 = std::get<0>(second);
+            auto x4 = std::get<1>(second);
+
             while(result.first != result.second) {
                 std::cout << result.first->first << ": " << std::get<0>(result.first->second) << ' ' << std::get<1>(result.first->second) << '\n';
                 ++result.first;
