@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -90,6 +91,10 @@ public:
         return inverted_index.contains(item);
     }
 
+    void reset() {
+        marked = std::set<std::string>();
+    }
+
     const std::vector<std::string> items;
     const int size;
 
@@ -145,27 +150,59 @@ int main(int argc, char** argv) {
 
     // print(bingo_boards);
 
-    auto play = [&draws, &bingo_boards]() {
-        for (auto draw : draws) {
-            for(std::size_t i = 0; i < bingo_boards.size(); ++i) {
-                if(bingo_boards.at(i).mark(draw)) {
-                    std::cout << draw << '\n';
-                    auto unmarked = bingo_boards.at(i).unmarked();
-                    int sum = 0;
-                    for(auto i : unmarked) {
-                        std::cout << i << ' ';
-                        sum += std::atoi(i.c_str());
-                    }
-                    std::cout << '\n' << sum << '\n';
-                    std::cout << std::atoi(draw.c_str()) * sum << '\n';
-
-                    return;
-                }
-            }
+    auto sum_unmarked = [](const auto& unmarked) {
+        int sum = 0;
+        for(auto i : unmarked) {
+            sum += std::atoi(i.c_str());
         }
+        return sum;
     };
 
-    play();
+    {
+        auto play = [&]() {
+            for (auto draw : draws) {
+                for(auto &bingo_board : bingo_boards) {
+                    if(bingo_board.mark(draw)) {
+                        auto unmarked = bingo_board.unmarked();
+                        int sum = sum_unmarked(bingo_board.unmarked());
+                        std::cout << "Part 1: " << std::atoi(draw.c_str()) * sum << '\n';
+
+                        return;
+                    }
+                }
+            }
+        };
+
+        play();
+    }
+
+    std::for_each(bingo_boards.begin(), bingo_boards.end(), [](BingoBoard &board) { board.reset();});
+
+    {
+        auto play = [&]() {
+            std::vector<bool> removed(bingo_boards.size(), false);
+            auto current_draw = draws.cbegin();
+            std::size_t last_completed = 0;
+            for (; current_draw != draws.cend(); ++current_draw) {
+                for(std::size_t i = 0; i < bingo_boards.size(); ++i) {
+                    if(!removed.at(i) && bingo_boards.at(i).mark(*current_draw)) {
+                        removed.at(i) = true;
+                        last_completed = i;
+                    }
+                }
+
+                if(std::all_of(removed.cbegin(), removed.cend(), [](bool value) { return value;})) {
+                    break;
+                }
+            }
+
+            int sum = sum_unmarked(bingo_boards.at(last_completed).unmarked());
+            std::cout << "Part 2: Bingo Board #" << (last_completed + 1) << ". Result " << std::atoi(current_draw->c_str()) * sum << '\n';
+        };
+
+        play();
+    }
+
 
     return 0;
 }
