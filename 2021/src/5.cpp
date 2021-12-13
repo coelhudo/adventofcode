@@ -1,4 +1,5 @@
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <utility>
 #include <vector>
@@ -22,8 +23,16 @@ int main(int argc, char** argv) {
         return std::atoi(regex_it->str().c_str());
     };
 
+    auto insert_coordinates = [&](int i, int j) {
+        auto it = coordinates.emplace(i, j);
+        if(!it.second) {
+            overlapping_coordinates[{i, j}] += 1;
+        }
+    };
+
     int max_x = 0;
     int max_y = 0;
+    // O(N log N) where N is the number of possible points
     while(std::getline(ifs, line)) {
         std::regex number_regex("(\\d+)");
         auto first = std::sregex_iterator(line.begin(), line.end(), number_regex);
@@ -38,26 +47,31 @@ int main(int argc, char** argv) {
             if (y1 > y2)
                 std::swap(start, end);
 
-            for (auto i = start; i <= end; ++i) {
-                auto it = coordinates.emplace(x1, i);
-                if(!it.second) {
-                    overlapping_coordinates[{x1, i}] += 1;
-                }
+            for (auto y = start; y <= end; ++y) {
+                insert_coordinates(x1, y);
             }
         } else if (y1 == y2) {
             auto start = x1, end = x2;
             if (x1 > x2)
                 std::swap(start, end);
 
-            for (auto i = start; i <= end; ++i) {
-                auto it = coordinates.emplace(i, y1);
-                if(!it.second) {
-                    overlapping_coordinates[{i, y1}] += 1;
-                }
+            for (auto x = start; x <= end; ++x) {
+                insert_coordinates(x, y1);
             }
         } else {
-            // TODO
-            // coordinates.emplace(std::make_pair(x1, std::make_tuple(y1, x2)));
+            // Comment this for Part 1
+            auto next = [](int &i) { return ++i;};
+            auto prev = [](int &i) { return --i;};
+            auto le = [](int i, int j) { return i <= j;};
+            auto ge = [](int i, int j) { return i >= j;};
+
+            auto advance_x = (x1 <= x2) ? next : prev;
+            auto cmp_x = (x1 <= x2) ? le : ge;
+
+            auto advance_y = (y1 <= y2) ? next : prev;
+            for(auto x = x1, y = y1; cmp_x(x, x2); advance_x(x), advance_y(y)) {
+                insert_coordinates(x, y);
+            }
         }
     }
 
@@ -68,7 +82,7 @@ int main(int argc, char** argv) {
     //     }
     //     std::cout << '\n';
     // }
-    std::cout << "Part 1: " << overlapping_coordinates.size() << '\n';
+    std::cout << "Part 2: " << overlapping_coordinates.size() << '\n';
 
     return 0;
 }
