@@ -29,17 +29,23 @@ int main(int argc, char** argv) {
         fuels.emplace_back(std::atoi(line.c_str()));
     }
 
-
+    auto search = [&](auto compute) {
     // naive search
-    int min_count = std::numeric_limits<int>::max();
-    for(int pos = 1; pos <= max; ++pos) {
-        int count = 0;
-        for(auto fuel : fuels) {
-            count += std::abs(fuel - pos);
+        int min_count = std::numeric_limits<int>::max();
+        for(int pos = 1; pos <= max; ++pos) {
+            int count = 0;
+            for(auto fuel : fuels) {
+                count += compute(std::abs(fuel - pos));
+            }
+            min_count = std::min(count, min_count);
         }
-        min_count = std::min(count, min_count);
-    }
-    std::cout << "Part 1: " << min_count << '\n';
+        return min_count;
+    };
+
+    std::cout << "Part 1: " << search([](int i) { return i;}) << '\n';
+
+    auto summation = [](int i) { return (i * (i + 1)) / 2;};
+    std::cout << "Part 2: " << search(summation) << '\n';
 
     return 0;
 }
