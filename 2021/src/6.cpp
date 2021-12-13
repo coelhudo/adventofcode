@@ -5,6 +5,7 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <numeric>
 
 int main(int argc, char** argv) {
     if (argc == 1) {
@@ -18,30 +19,27 @@ int main(int argc, char** argv) {
     std::stringstream ss(input);
     std::string line;
 
-    std::vector<int> fishes;
+    std::vector<long long int> fishes(9);
     while(std::getline(ss, line, ',')) {
-        fishes.emplace_back(std::atoi(line.c_str()));
+        int index = std::atoi(line.c_str());
+        fishes.at(index)++;
     }
 
-    for(int day = 0; day < 80; ++day) {
-        // for (auto &fish : fishes) {
-        //     std::cout << fish << " ";
-        // }
-        // std::cout << "\n";
-        int zeros = 0;
-        for (auto &fish : fishes) {
-            if (fish-- == 0) {
-                ++zeros;
-                fish = 6;
+    auto play = [](auto fishes, int days) {
+        for(int day = 0; day < days; ++day) {
+            long long int zeros = fishes.at(0);
+            for(std::size_t i = 1; i < fishes.size(); ++i) {
+                fishes.at(i-1) = fishes.at(i);
             }
+            fishes.at(8) = zeros;
+            fishes.at(6) += zeros;
         }
 
-        for(int i = 0; i < zeros; ++i) {
-            fishes.emplace_back(8);
-        }
-    }
+        long long int result = 0;
+        return std::accumulate(fishes.cbegin(), fishes.cend(), result);
+    };
 
-    std::cout << "Part 1: " << fishes.size() << '\n';
-
+    std::cout << "Part 1: " << play(fishes, 80) << '\n';
+    std::cout << "Part 2: " << play(fishes, 256) << '\n';
     return 0;
 }
