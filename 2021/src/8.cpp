@@ -40,6 +40,18 @@ int main(int argc, char** argv) {
     const digit_t b = c << 1;
     const digit_t a = b << 1;
     const std::map<char, digit_t> mapped_digits{{'a', a}, {'b', b}, {'c', c}, {'d', d}, {'e', e}, {'f', f}, {'g', g}};
+    const std::map<unsigned long, int> mapped_integers = {
+        {(a | b | c | e | f | g).to_ullong(), 0},
+        {(c | f).to_ulong(), 1},
+        {(a | c | d | e | g).to_ulong(), 2},
+        {(a | c | d | f | g).to_ulong(), 3},
+        {(b | c | d | f).to_ulong(), 4},
+        {(a | b | d | f | g).to_ulong(), 5},
+        {(a | b | d | e | f | g).to_ulong(), 6},
+        {(a | c | f).to_ulong(), 7},
+        {(a | b | c | d | e | f | g).to_ulong(), 8},
+        {(a | b | c | d | f | g).to_ulong(), 9}
+    };
 
     std::vector<std::tuple<digits_t, digits_t, digits_t>> parsed_entries;
     while(std::getline(ifs, line)) {
@@ -86,6 +98,7 @@ int main(int argc, char** argv) {
     std::cout << "Part 1: " << counter << '\n';
 
     // // Part 2
+    counter = 0;
     for(auto [all, inputs, outputs] : parsed_entries) {
 
         digits_t all_copy = all;
@@ -100,26 +113,43 @@ int main(int argc, char** argv) {
 
         auto two_three_five = std::reduce(all_two_three_five.begin(), all_two_three_five.end(), digit_t(0xff), [](auto a, auto b) { return a & b;});
 
-        std::cout << two_three_five << '\n';
-
         auto all_zero_six_nine = all | std::views::filter([](const auto &v) {
             return v.count() == 6;
         });
 
         auto zero_six_nine = std::reduce(all_zero_six_nine.begin(), all_zero_six_nine.end(), digit_t(0xff), [](auto a, auto b) { return a & b;});
-        std::cout << zero_six_nine << '\n';
 
         auto new_a = seven ^ one;
-        std::cout << "a: " << new_a << '\n';
+        auto new_d = four & two_three_five;
+        auto new_g = (new_a | new_d) ^ two_three_five;
+        auto new_b = (one | new_d) ^ four;
+        auto new_e = (one | new_b | two_three_five) ^ eight;
+        auto new_f = (new_a | new_b | new_g) ^ zero_six_nine;
+        auto new_c = one ^ new_f;
 
-        auto new_d = four & one & eight & zero_six_nine;
-        std::cout << "d: " << new_d << '\n';
+        const std::map<unsigned long, char> new_digits{
+            {new_a.to_ulong(), 'a'}, {new_b.to_ulong(), 'b'}, {new_c.to_ulong(), 'c'},
+            {new_d.to_ulong(), 'd'}, {new_e.to_ulong(), 'e'}, {new_f.to_ulong(), 'f'},
+            {new_g.to_ulong(), 'g'}
+        };
 
-        auto new_b = four & one ^ new_d;
-        std::cout << "b: " << new_b << '\n';
+        std::stringstream ss;
+        for (auto output : outputs) {
+            digit_t result{0b0000000};
+            for(digit_t mask = 0b0000001; mask != 0b0; mask <<= 1) {
+                if((mask & output).to_ulong()) {
+                    char current_char = new_digits.at((mask & output).to_ulong());
+                    digit_t current = mapped_digits.at(current_char);
+                    result |= current;
+                }
+            }
 
+            ss << mapped_integers.at(result.to_ullong());
+        }
+        counter += std::atoi(ss.str().c_str());
     }
 
+    std::cout << "Part 2: " << counter << '\n';
 
     return 0;
 }
