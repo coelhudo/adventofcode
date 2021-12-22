@@ -4,6 +4,41 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <map>
+#include <set>
+
+using coordinate_t = std::pair<int, int>;
+using coordinates_t = std::set<coordinate_t>;
+
+std::map<coordinate_t, coordinates_t> basin_memory;
+
+std::pair<coordinates_t, bool> checkNeighbour(auto &access, int row, int column) {
+    if (basin_memory.contains({row, column}))
+        return {basin_memory.at({row, column}), true};
+
+    const auto current = access(row, column);
+    if (current > 8)
+        return {{{-1,-1}}, false};
+
+    coordinates_t coordinates{{row, column}};
+    auto check = [&current, &access, &coordinates](int row, int column) {
+        if (access(row, column) != current + 1)
+            return;
+
+        auto [neighbours, success] = checkNeighbour(access, row, column);
+
+        if (success)
+            coordinates.merge(neighbours);
+    };
+
+    check(row-1, column);
+    check(row+1, column);
+    check(row, column-1);
+    check(row, column+1);
+
+    basin_memory[{row, column}] = coordinates;
+    return {coordinates, true};
+}
 
 int main(int argc, char** argv) {
     if (argc == 1) {
@@ -50,6 +85,22 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "Part 1: " << count << '\n';
+
+    for(int row = 0; row < rows; ++row) {
+        for(int column = 0; column < columns; ++column) {
+            checkNeighbour(access, row, column);
+        }
+    }
+
+    std::vector<unsigned long long> a;
+    for(auto [coordinates, count] : basin_memory) {
+        auto [row, column] = coordinates;
+        // std::cout << access(row, column) << ", coord " << row << ", " << column << ": " << count.size() << '\n';
+        a.push_back(count.size());
+    }
+
+    std::ranges::sort(a, std::greater());
+    std::cout << "Part 2: " << a.at(0) * a.at(1) * a.at(2) << '\n';
 
     return 0;
 }
